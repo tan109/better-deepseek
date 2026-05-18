@@ -263,7 +263,9 @@
 
     let selection;
     try {
-      selection = await pickFolderSelection();
+      selection = await pickFolderSelection({
+        processGitignore: Boolean(appState.settings.processGitignoreOnUpload),
+      });
     } catch (err) {
       uploading = false;
       if (err?.name !== "AbortError") {

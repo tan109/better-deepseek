@@ -5,9 +5,12 @@
  */
 
 import { pickFolderSelection } from "../../lib/utils/folder-picker.js";
+import appState from "../state.js";
 
 export async function pickFolderAndConcatenate() {
-  const selection = await pickFolderSelection();
+  const selection = await pickFolderSelection({
+    processGitignore: Boolean(appState.settings.processGitignoreOnUpload),
+  });
   if (!selection) {
     return null;
   }

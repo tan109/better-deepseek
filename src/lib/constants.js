@@ -534,6 +534,7 @@ export const DEFAULT_SETTINGS = {
   tokenPriceDisplay: false,
   projectRagEnabled: false,
   projectRagLimit: 5,
+  processGitignoreOnUpload: true,
 };
 
 // ── Code language → file extension map ──

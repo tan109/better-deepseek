@@ -48,6 +48,7 @@
   let tokenPriceDisplay = $state(Boolean(appState.settings.tokenPriceDisplay));
   let projectRagEnabled = $state(Boolean(appState.settings.projectRagEnabled));
   let projectRagLimit = $state(Number(appState.settings.projectRagLimit) || 5);
+  let processGitignoreOnUpload = $state(Boolean(appState.settings.processGitignoreOnUpload));
   let advancedOpen = $state(false);
 
   let activeProject = $state(getActiveProject());
@@ -84,6 +85,7 @@
     tokenPriceDisplay = Boolean(appState.settings.tokenPriceDisplay);
     projectRagEnabled = Boolean(appState.settings.projectRagEnabled);
     projectRagLimit = Number(appState.settings.projectRagLimit) || 5;
+    processGitignoreOnUpload = Boolean(appState.settings.processGitignoreOnUpload);
   }
 
   export function refreshProject() {
@@ -143,6 +145,7 @@
     appState.settings.tokenPriceDisplay = tokenPriceDisplay;
     appState.settings.projectRagEnabled = projectRagEnabled;
     appState.settings.projectRagLimit = Number(projectRagLimit) || 5;
+    appState.settings.processGitignoreOnUpload = processGitignoreOnUpload;
 
     await chrome.storage.local.set({
       [STORAGE_KEYS.settings]: appState.settings,
@@ -413,6 +416,21 @@
         </p>
       </div>
     {/if}
+
+    <div class="bds-toggle-row">
+      <span class="bds-toggle-label">Process .gitignore during upload</span>
+      <label class="bds-switch">
+        <input
+          id="bds-gitignore-upload"
+          type="checkbox"
+          bind:checked={processGitignoreOnUpload}
+        />
+        <span class="bds-switch-track"></span>
+      </label>
+    </div>
+    <p style="font-size: 10px; opacity: 0.5; margin: -4px 0 8px; padding-left: 0;">
+      When uploading a folder, reads <code>.gitignore</code> files and skips matching files.
+    </p>
 
     <div class="bds-toggle-row">
       <span class="bds-toggle-label">Auto download create_file outputs</span>

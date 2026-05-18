@@ -3,13 +3,18 @@
  * Handles browser-specific folder selection and returns a normalized file list.
  */
 
-export async function pickFolderSelection() {
+import ignore from "ignore";
+
+export async function pickFolderSelection(options = {}) {
+  const { processGitignore = false } = options;
+
+  let result;
   if (supportsDirectoryPicker()) {
     try {
       const dirHandle = await window.showDirectoryPicker();
       const files = [];
       await readDirectoryHandle(dirHandle, dirHandle.name, files);
-      return {
+      result = {
         rootName: dirHandle.name || "folder",
         files,
       };
@@ -19,9 +24,15 @@ export async function pickFolderSelection() {
       }
       throw err;
     }
+  } else {
+    result = await pickFolderSelectionWithInput();
   }
 
-  return await pickFolderSelectionWithInput();
+  if (result && processGitignore) {
+    result.files = await applyGitignoreFilter(result.files, result.rootName);
+  }
+
+  return result;
 }
 
 async function pickFolderSelectionWithInput() {
@@ -237,6 +248,37 @@ function shouldKeepPath(path) {
   }
 
   return true;
+}
+
+async function applyGitignoreFilter(files, rootName) {
+  const gitignoreFiles = files.filter(f => {
+    const parts = f.path.split("/");
+    return parts.length >= 2 && parts[parts.length - 1] === ".gitignore";
+  });
+
+  if (!gitignoreFiles.length) return files;
+
+  const ig = ignore();
+  for (const gf of gitignoreFiles) {
+    try {
+      const content = await gf.text();
+      ig.add(content);
+    } catch {
+      // skip unreadable .gitignore
+    }
+  }
+
+  return files.filter(f => {
+    const parts = f.path.split("/");
+    const fileName = parts[parts.length - 1];
+    if (fileName === ".gitignore") return false;
+
+    const relParts = parts.slice(1);
+    const relPath = relParts.join("/");
+    if (!relPath) return true;
+
+    return !ig.ignores(relPath);
+  });
 }
 
 function isAbortError(err) {
