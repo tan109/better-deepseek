@@ -184,12 +184,12 @@
   }
 
   .bds-whats-new-modal {
-    background: #1e1f23;
-    border: 1px solid #3a3b3f;
+    background: var(--bds-bg-panel);
+    border: 1px solid var(--bds-border);
     border-radius: 18px;
     width: min(92vw, 460px);
     max-height: 85vh;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--bds-shadow);
     display: flex;
     flex-direction: column;
     outline: none;
@@ -206,7 +206,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid #3a3b3f;
+    border-bottom: 1px solid var(--bds-border);
   }
 
   .bds-header-left {
@@ -218,17 +218,17 @@
   .bds-modal-title {
     font-size: 16px;
     font-weight: 700;
-    color: #ececec;
+    color: var(--bds-text-primary);
   }
 
   .bds-version-tag {
     font-size: 11px;
     font-weight: 600;
-    background: #2a2b30;
-    color: #8e8ea0;
+    background: var(--bds-bg-elevated);
+    color: var(--bds-text-secondary);
     padding: 2px 8px;
     border-radius: 6px;
-    border: 1px solid #3a3b3f;
+    border: 1px solid var(--bds-border);
     display: flex;
     align-items: center;
     gap: 4px;
@@ -240,9 +240,9 @@
   }
 
   .bds-version-tag--clickable:hover {
-    background: #3a3b3f;
-    color: #ffffff;
-    border-color: #4d6bfe;
+    background: var(--bds-border);
+    color: var(--bds-text-primary);
+    border-color: var(--bds-accent);
   }
 
   .bds-chevron-icon {
@@ -254,7 +254,7 @@
   .bds-back-btn {
     background: transparent;
     border: none;
-    color: #8e8ea0;
+    color: var(--bds-text-secondary);
     cursor: pointer;
     padding: 4px;
     margin-left: -6px;
@@ -264,8 +264,8 @@
   }
 
   .bds-back-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #ffffff;
+    background: var(--bds-bg-hover);
+    color: var(--bds-text-primary);
   }
 
   .bds-back-btn svg {
@@ -276,7 +276,7 @@
   .bds-close-btn {
     background: transparent;
     border: none;
-    color: #6b6b7b;
+    color: var(--bds-text-tertiary);
     cursor: pointer;
     padding: 4px;
     border-radius: 6px;
@@ -285,8 +285,8 @@
   }
 
   .bds-close-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #ececec;
+    background: var(--bds-bg-hover);
+    color: var(--bds-text-primary);
   }
 
   .bds-close-btn svg {
@@ -304,7 +304,7 @@
     margin: 0 0 24px;
     font-size: 20px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--bds-text-primary);
     line-height: 1.3;
   }
 
@@ -324,13 +324,13 @@
     width: 40px;
     height: 40px;
     min-width: 40px;
-    background: #2a2b30;
+    background: var(--bds-bg-elevated);
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    border: 1px solid #3a3b3f;
-    color: #4d6bfe;
+    border: 1px solid var(--bds-border);
+    color: var(--bds-accent);
   }
 
   .bds-feature-icon-wrapper :global(svg) {
@@ -342,13 +342,13 @@
     margin: 0 0 4px;
     font-size: 14px;
     font-weight: 700;
-    color: #ececec;
+    color: var(--bds-text-primary);
   }
 
   .bds-feature-info p {
     margin: 0;
     font-size: 13px;
-    color: #8e8ea0;
+    color: var(--bds-text-secondary);
     line-height: 1.5;
   }
 
@@ -356,13 +356,13 @@
     display: inline-block;
     margin-top: 16px;
     font-size: 12px;
-    color: #6b6b7b;
+    color: var(--bds-text-tertiary);
     text-decoration: none;
     transition: color 0.2s;
   }
 
   .bds-and-more-link:hover {
-    color: #4d6bfe;
+    color: var(--bds-accent);
     text-decoration: underline;
   }
 
@@ -387,20 +387,20 @@
   .bds-history-version {
     font-size: 12px;
     font-weight: 800;
-    color: #4d6bfe;
+    color: var(--bds-accent);
     letter-spacing: 0.5px;
   }
 
   .bds-history-date {
     font-size: 11px;
-    color: #555565;
+    color: var(--bds-text-tertiary);
     font-weight: 600;
   }
 
   .bds-history-title {
     font-size: 16px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--bds-text-primary);
     margin: 0 0 10px;
   }
 
@@ -415,7 +415,7 @@
 
   .bds-history-features li {
     font-size: 13px;
-    color: #8e8ea0;
+    color: var(--bds-text-secondary);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -424,7 +424,7 @@
   .bds-history-feature-icon {
     width: 16px;
     height: 16px;
-    color: #4d6bfe;
+    color: var(--bds-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -442,37 +442,37 @@
     justify-content: center;
     gap: 8px;
     padding: 12px;
-    background: #2a2b30;
-    border: 1px solid #3a3b3f;
+    background: var(--bds-bg-elevated);
+    border: 1px solid var(--bds-border);
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
-    color: #ececec;
+    color: var(--bds-text-primary);
     text-decoration: none;
     transition: all 0.2s;
     margin-top: 8px;
   }
 
   .bds-see-more-link:hover {
-    background: #3a3b3f;
-    border-color: #4d6bfe;
-    color: #ffffff;
+    background: var(--bds-border);
+    border-color: var(--bds-accent);
+    color: var(--bds-text-primary);
   }
 
   .bds-see-more-link svg {
     width: 14px;
     height: 14px;
-    color: #4d6bfe;
+    color: var(--bds-accent);
   }
 
   .bds-modal-footer {
     padding: 12px 24px 20px;
-    border-top: 1px solid #3a3b3f;
+    border-top: 1px solid var(--bds-border);
   }
 
   .bds-primary-btn {
     width: 100%;
-    background: #4d6bfe;
+    background: var(--bds-accent);
     color: white;
     border: none;
     padding: 12px;
@@ -484,8 +484,8 @@
   }
 
   .bds-primary-btn:hover {
-    background: #5b7bff;
-    box-shadow: 0 4px 12px rgba(77, 107, 254, 0.2);
+    background: var(--bds-accent);
+    box-shadow: 0 4px 12px var(--bds-accent-glow);
   }
 
   .bds-primary-btn:active {
@@ -503,24 +503,24 @@
   .bds-link {
     font-size: 11px;
     font-weight: 500;
-    color: #6b6b7b;
+    color: var(--bds-text-tertiary);
     text-decoration: none;
     transition: color 0.2s;
   }
 
   .bds-link:hover {
-    color: #4d6bfe;
+    color: var(--bds-accent);
   }
 
   .bds-link-sep {
     font-size: 10px;
-    color: #3a3b3f;
+    color: var(--bds-border);
   }
 
   .bds-branding-note {
     font-size: 10px;
     text-align: center;
-    color: #6b6b7b;
+    color: var(--bds-text-tertiary);
     margin-top: 6px;
   }
 
@@ -528,7 +528,7 @@
   .bds-modal-body::-webkit-scrollbar { width: 4px; }
   .bds-modal-body::-webkit-scrollbar-track { background: transparent; }
   .bds-modal-body::-webkit-scrollbar-thumb {
-    background: #3a3b3f;
+    background: var(--bds-border);
     border-radius: 10px;
   }
 </style>

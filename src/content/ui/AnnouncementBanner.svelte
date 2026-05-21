@@ -102,11 +102,11 @@
     gap: 12px;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--bds-shadow);
+    border: 1px solid var(--bds-border);
     animation: bds-announcement-slide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    color: #fff;
-    background: rgba(20, 20, 22, 0.85);
+    color: var(--bds-text-primary);
+    background: color-mix(in srgb, var(--bds-bg-panel) 88%, transparent);
   }
 
   @keyframes bds-announcement-slide {
@@ -149,14 +149,14 @@
     padding: 4px;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--bds-text-tertiary);
     cursor: pointer;
     border-radius: 6px;
     transition: all 0.2s;
   }
 
   .bds-announcement-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--bds-bg-hover);
+    color: var(--bds-text-primary);
   }
 </style>
