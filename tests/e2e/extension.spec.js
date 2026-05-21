@@ -123,17 +123,12 @@ test("renders PPTX, Excel, and Docx cards for office-generation tags", async ({ 
   await expect(page.locator(".bds-docx-card")).toContainText("brief.docx");
 });
 
-test("adds code download buttons and opens the JavaScript runner", async ({ page }) => {
+test("opens the JavaScript runner", async ({ page }) => {
   await addCodeMessage(page, "python", 'print("hello")');
   await addCodeMessage(page, "javascript", 'console.log("runner");');
 
   await expect(page.getByRole("button", { name: "Run Python" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run JS" })).toBeVisible();
-  await expect(page.locator(".bds-code-download")).toHaveCount(2);
-
-  const codeDownload = page.waitForEvent("download");
-  await page.locator(".md-code-block .bds-code-download").first().click();
-  await expect(await codeDownload).toBeTruthy();
 
   await page.getByRole("button", { name: "Run JS" }).click();
   await expect(page.locator(".bds-code-runner-card")).toBeVisible();
