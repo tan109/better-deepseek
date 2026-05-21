@@ -65,7 +65,7 @@ export async function loadStateFromStorage() {
         },
         ...state.settings.customSystemPrompts
       ];
-      state.settings.activeSystemPromptId = backupId;
+      state.settings.activeSystemPromptId = "default";
     }
     
     state.settings.systemPromptBackupDone = true;
@@ -78,6 +78,7 @@ export async function loadStateFromStorage() {
   } else if (Number(storedSettings.systemPromptTemplateVersion || 0) < SYSTEM_PROMPT_TEMPLATE_VERSION) {
     state.settings.systemPrompt = DEFAULT_SYSTEM_PROMPT;
     state.settings.systemPromptTemplateVersion = SYSTEM_PROMPT_TEMPLATE_VERSION;
+    state.settings.activeSystemPromptId = "default";
     await chrome.storage.local.set({
       [STORAGE_KEYS.settings]: state.settings,
     });
