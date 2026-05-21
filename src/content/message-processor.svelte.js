@@ -308,7 +308,7 @@ export function processMessageNode(node) {
       }
     }
 
-    if (isSettled && parsed.askQuestions.length > 0 && isLatestAssistantMessage(node)) {
+    if (timeSinceUpdate > 1200 && parsed.askQuestions.length > 0 && isLatestAssistantMessage(node)) {
       state.activeQuestions = parsed.askQuestions;
       window.dispatchEvent(new CustomEvent('bds-ask-questions', { 
         detail: { 
@@ -319,9 +319,7 @@ export function processMessageNode(node) {
     }
 
     // TAG-DRIVEN INTERFACE LOCK
-    const isCurrentlyLoading = parsed.isStreamingTool || 
-                                stateData.isLongWorkActive || 
-                                (isLatestAssistant && isGenerating && !isSettled);
+    const isCurrentlyLoading = parsed.isStreamingTool || stateData.isLongWorkActive;
     const hasTags = parsed.containsControlTags || isCurrentlyLoading;
 
     if (hasTags) {
