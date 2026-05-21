@@ -214,9 +214,9 @@ describe("SidebarMenuInjector", () => {
   });
 
   describe("settings drawer injection", () => {
-    it("injects Get BDS App option when menu contains 'Get App'", async () => {
+    it("injects Get BDS App and What's New options when menu contains 'Get App'", async () => {
       const menu = buildSettingsDrawerMenu("Get App");
-      await vi.waitFor(() => expect(menu.querySelector(".bds-get-app-option")).not.toBeNull());
+      await vi.waitFor(() => expect(menu.querySelector(".bds-whats-new-option")).not.toBeNull());
 
       const options = menu.querySelectorAll(".ds-dropdown-menu-option");
       const labels = Array.from(options).map((o) =>
@@ -224,13 +224,15 @@ describe("SidebarMenuInjector", () => {
       );
       const getAppIdx = labels.indexOf("Get App");
       const bdsIdx = labels.indexOf("Get BDS App");
+      const wnIdx = labels.indexOf("What's New?");
       expect(getAppIdx).toBeGreaterThanOrEqual(0);
       expect(bdsIdx).toBe(getAppIdx + 1);
+      expect(wnIdx).toBe(bdsIdx + 1);
     });
 
-    it("injects Get BDS App option when menu contains 'Download mobile App'", async () => {
+    it("injects Get BDS App and What's New options when menu contains 'Download mobile App'", async () => {
       const menu = buildSettingsDrawerMenu("Download mobile App");
-      await vi.waitFor(() => expect(menu.querySelector(".bds-get-app-option")).not.toBeNull());
+      await vi.waitFor(() => expect(menu.querySelector(".bds-whats-new-option")).not.toBeNull());
 
       const options = menu.querySelectorAll(".ds-dropdown-menu-option");
       const labels = Array.from(options).map((o) =>
@@ -238,25 +240,28 @@ describe("SidebarMenuInjector", () => {
       );
       const targetIdx = labels.indexOf("Download mobile App");
       const bdsIdx = labels.indexOf("Get BDS App");
+      const wnIdx = labels.indexOf("What's New?");
       expect(bdsIdx).toBe(targetIdx + 1);
+      expect(wnIdx).toBe(bdsIdx + 1);
     });
 
-    it("does not inject Get BDS App into chat context menus (no target text)", async () => {
+    it("does not inject settings options into chat context menus (no target text)", async () => {
       const menu = buildDropdownMenu();
       await vi.waitFor(() => expect(menu.querySelector(".bds-export-option")).not.toBeNull());
-      // small extra wait to confirm it never appears
       await new Promise((r) => setTimeout(r, 100));
       expect(menu.querySelector(".bds-get-app-option")).toBeNull();
+      expect(menu.querySelector(".bds-whats-new-option")).toBeNull();
     });
 
-    it("does not inject Get BDS App twice", async () => {
+    it("does not inject settings options twice", async () => {
       const menu = buildSettingsDrawerMenu("Get App");
-      await vi.waitFor(() => expect(menu.querySelector(".bds-get-app-option")).not.toBeNull());
+      await vi.waitFor(() => expect(menu.querySelector(".bds-whats-new-option")).not.toBeNull());
 
       document.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await new Promise((r) => setTimeout(r, 150));
 
       expect(menu.querySelectorAll(".bds-get-app-option")).toHaveLength(1);
+      expect(menu.querySelectorAll(".bds-whats-new-option")).toHaveLength(1);
     });
 
     it("opens GitHub releases URL when Get BDS App is clicked", async () => {
@@ -272,6 +277,21 @@ describe("SidebarMenuInjector", () => {
         "_blank"
       );
       openSpy.mockRestore();
+    });
+
+    it("triggers What's New modal when What's New option is clicked", async () => {
+      const menu = buildSettingsDrawerMenu("Get App");
+      await vi.waitFor(() => expect(menu.querySelector(".bds-whats-new-option")).not.toBeNull());
+
+      // Import the real state module to check its value
+      const stateModule = await import("../../../src/content/state.js");
+      const appState = stateModule.default;
+      appState.ui = { refreshWhatsNew: vi.fn() };
+
+      menu.querySelector(".bds-whats-new-option").click();
+
+      expect(appState.whatsNewPending).toBe(true);
+      expect(appState.ui.refreshWhatsNew).toHaveBeenCalledOnce();
     });
   });
 

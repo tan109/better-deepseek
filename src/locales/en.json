@@ -429,7 +429,8 @@
     "sidebarMenu": {
       "tags": "Tags (BDS)",
       "exportChat": "Export Chat (BDS)",
-      "getBdsApp": "Get BDS App"
+      "getBdsApp": "Get BDS App",
+      "whatsNew": "What's New?"
     },
     "sidebarSearch": {
       "placeholder": "Search history... (#tag)"

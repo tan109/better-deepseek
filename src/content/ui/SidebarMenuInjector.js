@@ -2,6 +2,7 @@ import { exportSession } from "../tools/exporter.js";
 import { setPendingExport, checkPendingExport } from "../tools/pending-export.js";
 import { openTagEditor } from "../tags/tag-editor.js";
 import { i18n } from "../../lib/i18n.svelte.js";
+import appState from "../state.js";
 
 // Keep track of which chat item's menu was opened
 let lastClickedChatUrl = null;
@@ -29,6 +30,11 @@ const DOWNLOAD_ICON = `
 </svg>`;
 
 const GET_BDS_APP_URL = "https://github.com/EdgeTypE/better-deepseek/releases";
+
+const WHATS_NEW_ICON = `
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+</svg>`;
 
 export function initSidebarMenuInjector() {
   // Capture the chat URL from any click inside a sidebar chat link.
@@ -164,7 +170,7 @@ function injectOptions(menu) {
 }
 
 function injectSettingsDrawerOptions(menu) {
-  if (menu.querySelector(".bds-get-app-option")) return;
+  if (menu.querySelector(".bds-whats-new-option")) return;
 
   const targetLabels = ["Download mobile App", "Get App"];
   let targetOption = null;
@@ -189,6 +195,18 @@ function injectSettingsDrawerOptions(menu) {
   );
 
   targetOption.parentNode.insertBefore(bdsOption, targetOption.nextSibling);
+
+  const whatsNewOption = createMenuOption(
+    i18n.t('sidebarMenu.whatsNew'),
+    WHATS_NEW_ICON,
+    "bds-whats-new-option",
+    () => {
+      appState.whatsNewPending = true;
+      if (appState.ui) appState.ui.refreshWhatsNew();
+    }
+  );
+
+  bdsOption.parentNode.insertBefore(whatsNewOption, bdsOption.nextSibling);
 }
 
 function createMenuOption(label, iconHtml, className, onClick) {
