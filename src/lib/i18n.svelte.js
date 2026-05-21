@@ -58,7 +58,11 @@ class I18nManager {
     if (!updates || typeof updates !== "object") return;
     for (const [code, data] of Object.entries(updates)) {
       if (data && data.messages && locales[code]) {
-        locales[code] = data;
+        const localDate = locales[code].updatedAt || "1970-01-01T00:00:00Z";
+        const remoteDate = data.updatedAt || "1970-01-01T00:00:00Z";
+        if (remoteDate > localDate) {
+          locales[code] = data;
+        }
       }
     }
   }

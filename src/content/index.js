@@ -47,6 +47,11 @@ async function init() {
   // Initialize localization locale
   i18n.init(state.settings.syncLocale ? null : state.settings.locale);
 
+  // Silently check for language updates on startup
+  if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+    chrome.runtime.sendMessage({ type: "BDS_UPDATE_LANGUAGES" });
+  }
+
   injectHookScript();
   setupBridgeEvents();
   mountUi();
