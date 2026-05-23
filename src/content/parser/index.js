@@ -17,7 +17,7 @@ import { parseMemoryWrite } from "./memory-parser.js";
 import { sanitizeVisibleText } from "./text-sanitizer.js";
 
 // Tool renderers that have visual cards
-const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch"]);
+const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "skill_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch"]);
 
 /**
  * Parse a raw message text for all BDS tags.
@@ -61,6 +61,7 @@ export function parseBdsMessage(rawText, isSettled = false) {
     createFiles: [],
     memoryWrites: [],
     characterCreates: [],
+    skillCreates: [],
     askQuestions: [],
     autoRequests: {
       webFetch: [],
@@ -125,6 +126,14 @@ export function parseBdsMessage(rawText, isSettled = false) {
       result.characterCreates.push({
         name: attrs.name || "New Character",
         usage: attrs.usage || attrs.kullanim_alani || "",
+        content: content
+      });
+    }
+
+      if (name === "skill_create") {
+      result.skillCreates.push({
+        name: attrs.name || "New Skill",
+        usage: attrs.usage || "",
         content: content
       });
     }
@@ -207,6 +216,10 @@ export function parseBdsMessage(rawText, isSettled = false) {
       ),
     });
   }
+
+  // Remove skill_create tags from visible text so the raw content doesn't leak
+  // The tag content is saved to skill storage; only the UI card is shown.
+  text = text.replace(/<BDS:skill_create[^>]*>[\s\S]*?<\/BDS:skill_create>/gi, '');
 
   result.visibleText = sanitizeVisibleText(text);
 

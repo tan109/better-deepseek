@@ -111,6 +111,7 @@
       "uploadLabel": "Upload Skill (.md)",
       "empty": "No skills loaded.",
       "namePlaceholder": "Skill Name",
+      "usagePlaceholder": "Usage (e.g. typescript, react)",
       "contentPlaceholder": "Skill persona/instructions...",
       "cancel": "Cancel",
       "save": "Save",
@@ -424,6 +425,8 @@
       "questionsSubtitle": "Please provide your answers in the interaction panel below.",
       "characterCreated": "Character/Persona created.",
       "characterActive": "Active character: <strong>{{name}}</strong>",
+      "skillCreated": "Skill created.",
+      "skillActive": "Active skill: <strong>{{name}}</strong>",
       "webFetchRequested": "Web page is being fetched",
       "githubFetchRequested": "GitHub repository is being fetched"
     },

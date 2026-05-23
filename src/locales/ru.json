@@ -111,6 +111,7 @@
       "uploadLabel": "Загрузить навык (.md)",
       "empty": "Нет загруженных навыков.",
       "namePlaceholder": "Название навыка",
+      "usagePlaceholder": "Использование (например, typescript, react)",
       "contentPlaceholder": "Инструкции/описание навыка...",
       "cancel": "Отмена",
       "save": "Сохранить",
@@ -421,6 +422,8 @@
       "questionsSubtitle": "Пожалуйста, дайте ответы в панели взаимодействия ниже.",
       "characterCreated": "Персонаж создан.",
       "characterActive": "Активный персонаж: <strong>{{name}}</strong>",
+      "skillCreated": "Навык создан.",
+      "skillActive": "Активный навык: <strong>{{name}}</strong>",
       "webFetchRequested": "Веб-страница загружается",
       "githubFetchRequested": "GitHub репозиторий загружается"
     },

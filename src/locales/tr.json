@@ -111,6 +111,7 @@
       "uploadLabel": "Yetenek Yükle (.md)",
       "empty": "Yetenek yüklenmedi.",
       "namePlaceholder": "Yetenek Adı",
+      "usagePlaceholder": "Kullanım (örn. typescript, react)",
       "contentPlaceholder": "Yetenek yönergeleri/tanımlamaları...",
       "cancel": "İptal",
       "save": "Kaydet",
@@ -421,6 +422,8 @@
       "questionsSubtitle": "Lütfen yanıtlarınızı aşağıdaki etkileşim panelinden girin.",
       "characterCreated": "Karakter/Persona oluşturuldu.",
       "characterActive": "Aktif karakter: <strong>{{name}}</strong>",
+      "skillCreated": "Yetenek oluşturuldu.",
+      "skillActive": "Aktif yetenek: <strong>{{name}}</strong>",
       "webFetchRequested": "Web sayfası getiriliyor",
       "githubFetchRequested": "GitHub deposu getiriliyor"
     },

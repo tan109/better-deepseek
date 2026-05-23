@@ -65,7 +65,7 @@ describe("storage integration", () => {
     expect(state.settings.preferredLang).toBe("English");
     expect(messageTextMocks.setHtmlToMarkdownMaxDepth).toHaveBeenCalledWith(120);
     expect(bridgeMocks.setMaxChatSessions).toHaveBeenCalledWith(64);
-    expect(state.skills).toEqual([{ id: "1", name: "Skill", content: "Do X", active: true }]);
+    expect(state.skills).toEqual([{ id: "1", name: "Skill", usage: "", content: "Do X", active: true }]);
     expect(state.memories).toEqual({
       user_name: { value: "Alex", importance: "always" },
     });

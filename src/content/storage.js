@@ -178,6 +178,7 @@ export function normalizeSkills(raw) {
     .map((item) => ({
       id: String(item && item.id ? item.id : makeId()),
       name: String(item && item.name ? item.name : "Skill"),
+      usage: String(item && item.usage ? item.usage : ""),
       content: String(item && item.content ? item.content : ""),
       active: item && typeof item.active === "boolean" ? item.active : true,
     }))

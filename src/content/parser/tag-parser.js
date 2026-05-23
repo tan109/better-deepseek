@@ -39,6 +39,7 @@ export function normalizeTaggedCodeContent(content, tagName) {
     name === "pptx" ||
     name === "excel" ||
     name === "character_create" ||
+    name === "skill_create" ||
     name === "auto:code_runner"
   ) {
     output = unwrapMarkdownCodeFence(output);
@@ -66,6 +67,13 @@ export function normalizeTaggedCodeContent(content, tagName) {
 function stripLeadingChatter(content) {
   let output = String(content || "").trim();
 
+  // If content is wrapped in a code fence (possibly with leading chatter),
+  // unwrap it first so the JS-keyword check can work on the actual code.
+  const fenceMatch = output.match(/```(?:[a-zA-Z0-9_+.-]*)\s*\r?\n?([\s\S]*?)```\s*$/);
+  if (fenceMatch) {
+    output = fenceMatch[1].trim();
+  }
+
   // If it already looks like it starts with code, leave it
   if (/^(?:const|let|var|function|async|import|export|class|await|\/\/|\/\*)/.test(output)) {
     return output;
@@ -88,42 +96,24 @@ function stripLeadingChatter(content) {
 export function unwrapMarkdownCodeFence(content) {
   let text = String(content || "");
 
-  // Find the first and last occurrences of the code fence marker.
-  // This approach correctly handles nested code fences (e.g., inside a README.md)
-  // because the outer fences created by the AI inside the BDS tag will be
-  // the very first and very last markers in the string.
-  const firstFenceIndex = text.indexOf("```");
-  if (firstFenceIndex !== -1) {
-    // Find the end of the first fence's line (to skip the language tag)
-    let contentStartIndex = text.indexOf("\n", firstFenceIndex);
-    if (contentStartIndex === -1) {
-      contentStartIndex = firstFenceIndex + 3; // No newline, just start after ```
-    } else {
-      contentStartIndex += 1; // Start after the newline
-    }
+  // Only unwrap if the ENTIRE content is wrapped in a single outer code fence.
+  // This correctly preserves content with multiple inner code fences
+  // (e.g., README files, skill instructions with code examples).
+  const trimmed = text.trim();
 
-    const lastFenceIndex = text.lastIndexOf("```");
-
-    // If there is a distinct closing fence, extract everything in between.
-    if (lastFenceIndex > firstFenceIndex) {
-      return text.substring(contentStartIndex, lastFenceIndex).trim();
-    }
+  // Match: ```lang\n...\n``` (single outer fence, nothing before/after)
+  const singleFenceMatch = trimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)\s*\r?\n?([\s\S]*?)```\s*$/);
+  if (singleFenceMatch) {
+    return singleFenceMatch[1].trim();
   }
 
-  // Handle unclosed fence: ```python\n...code... (no closing ```)
-  const unclosedMatch = text.match(/```(?:[a-zA-Z0-9_+.-]*)\s*\r?\n([\s\S]+)$/);
+  // Handle unclosed fence: ```lang\n...code... (no closing ```)
+  const unclosedMatch = trimmed.match(/^```(?:[a-zA-Z0-9_+.-]*)\s*\r?\n?([\s\S]+)$/);
   if (unclosedMatch) {
     return unclosedMatch[1].trim();
   }
 
-  // Strip ALL stray leading/trailing ``` markers 
-  while (/^\s*```/.test(text)) {
-    text = text.replace(/^\s*```[a-zA-Z0-9_+.-]*\s*\r?\n?/, "");
-  }
-  while (/```\s*$/.test(text)) {
-    text = text.replace(/\r?\n?\s*```\s*$/, "");
-  }
-
-  return text.trim();
+  // Not wrapped in a single fence — return as-is (preserves multiple nested code blocks)
+  return trimmed;
 }
 

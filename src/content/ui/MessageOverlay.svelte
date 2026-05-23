@@ -84,6 +84,23 @@
             <div class="bds-question-subtitle">{@html t('messageOverlay.characterActive', { name: block.attrs.name || 'New Character' })}</div>
           </div>
         </div>
+      {:else if block.name === 'skill_create'}
+        <div class="bds-question-info-card bds-skill-card">
+          <div class="bds-question-icon bds-skill-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+            </svg>
+          </div>
+          <div class="bds-question-content">
+            <div class="bds-question-title">{t('messageOverlay.skillCreated')}</div>
+            <div class="bds-question-subtitle">
+              {@html t('messageOverlay.skillActive', { name: block.attrs.name || 'New Skill' })}
+              {#if block.attrs.usage}
+                <br><span style="font-size: 12px; opacity: 0.7;">{block.attrs.usage}</span>
+              {/if}
+            </div>
+          </div>
+        </div>
       {:else if block.name === 'auto:request_web_fetch'}
         <div class="bds-question-info-card bds-web-fetch-card">
           <div class="bds-question-icon bds-web-fetch-icon">
@@ -168,6 +185,15 @@
 
   .bds-character-card {
     border-left: 3px solid #10b981;
+  }
+
+  .bds-skill-icon {
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+  }
+
+  .bds-skill-card {
+    border-left: 3px solid #8b5cf6;
   }
 
   .bds-web-fetch-icon {

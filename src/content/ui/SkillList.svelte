@@ -12,6 +12,7 @@
   // Editing state
   let editingId = $state(null);
   let editingName = $state("");
+  let editingUsage = $state("");
   let editingContent = $state("");
 
   export function refresh() {
@@ -48,6 +49,7 @@
     appState.skills.push({
       id: makeId(),
       name,
+      usage: "",
       content,
       active: true,
     });
@@ -96,6 +98,7 @@
   function startEdit(skill) {
     editingId = skill.id;
     editingName = skill.name;
+    editingUsage = skill.usage || "";
     editingContent = skill.content;
   }
 
@@ -107,6 +110,7 @@
     const skill = appState.skills.find(s => s.id === editingId);
     if (skill) {
       skill.name = editingName;
+      skill.usage = editingUsage;
       skill.content = editingContent;
       
       await chrome.storage.local.set({
@@ -167,6 +171,11 @@
             bind:value={editingName} 
             placeholder={t('skillList.namePlaceholder')}
           />
+          <input 
+            class="bds-input" 
+            bind:value={editingUsage} 
+            placeholder={t('skillList.usagePlaceholder')}
+          />
           <textarea 
             class="bds-input" 
             bind:value={editingContent} 
@@ -185,7 +194,14 @@
               checked={skill.active}
               onchange={(e) => toggleSkill(skill.id, e.target.checked)}
             />
-            <span>{skill.name}</span>
+            <div style="display: flex; flex-direction: column; overflow: hidden;">
+              <span style="font-weight: 500; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">{skill.name}</span>
+              {#if skill.usage}
+                <span style="font-size: 10px; opacity: 0.6; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                  {skill.usage.length > 50 ? skill.usage.slice(0, 50) + "..." : skill.usage}
+                </span>
+              {/if}
+            </div>
           </label>
           <div style="display: flex; gap: 6px;">
             <button type="button" class="bds-btn-outlined" style="font-size: 11px; padding: 4px 8px;" onclick={() => startEdit(skill)}>
