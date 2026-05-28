@@ -9,6 +9,7 @@ const readerMocks = vi.hoisted(() => ({
   fetchGitHubRepo: vi.fn(),
   fetchTwitterTweet: vi.fn(),
   fetchYouTubeData: vi.fn(),
+  searchWeb: vi.fn(),
 }));
 
 vi.mock("../../src/content/files/web-reader.js", () => ({
@@ -22,6 +23,9 @@ vi.mock("../../src/content/files/twitter-reader.js", () => ({
 }));
 vi.mock("../../src/content/files/youtube-reader.js", () => ({
   fetchYouTubeData: readerMocks.fetchYouTubeData,
+}));
+vi.mock("../../src/content/files/search-reader.js", () => ({
+  searchWeb: readerMocks.searchWeb,
 }));
 
 function setupAutoDom() {
@@ -114,5 +118,46 @@ describe("auto integration", () => {
 
     expect(document.querySelector('input[type="file"]').files).toHaveLength(1);
     expect(document.querySelector("button").click).toHaveBeenCalledOnce();
+  });
+
+  it("searches and injects the returned file once", async () => {
+    const file = new File(["# Search Results"], "query.md", { type: "text/markdown" });
+    readerMocks.searchWeb.mockResolvedValue(file);
+    const { handleAutoSearch } = await importAutoModule();
+
+    await handleAutoSearch("test query", 3);
+    await vi.advanceTimersByTimeAsync(600);
+
+    const input = document.querySelector('input[type="file"]');
+    const editor = document.querySelector("#chat-input");
+    const sendButton = document.querySelector("button");
+
+    expect(readerMocks.searchWeb).toHaveBeenCalledWith("test query", 3, expect.any(Function));
+    expect(input.files).toHaveLength(1);
+    expect(editor.value).toContain("Search Result");
+    expect(sendButton.click).toHaveBeenCalledOnce();
+  });
+
+  it("prevents duplicate auto search requests for the same query", async () => {
+    readerMocks.searchWeb.mockResolvedValue(
+      new File(["results"], "q.md", { type: "text/markdown" }),
+    );
+    const { handleAutoSearch } = await importAutoModule();
+
+    await handleAutoSearch("same query");
+    await handleAutoSearch("same query");
+
+    expect(readerMocks.searchWeb).toHaveBeenCalledOnce();
+  });
+
+  it("creates an error attachment when search fails", async () => {
+    readerMocks.searchWeb.mockRejectedValue(new Error("search error"));
+    const { handleAutoSearch } = await importAutoModule();
+
+    await handleAutoSearch("bad query");
+    await vi.advanceTimersByTimeAsync(600);
+
+    const input = document.querySelector('input[type="file"]');
+    expect(input.files[0].name).toContain("search_error_bad_query");
   });
 });

@@ -67,7 +67,8 @@ export function parseBdsMessage(rawText, isSettled = false) {
       webFetch: [],
       githubFetch: [],
       twitterFetch: [],
-      youtubeFetch: []
+      youtubeFetch: [],
+      searchQueries: [],
     },
     visibleText: text,
   };
@@ -78,7 +79,7 @@ export function parseBdsMessage(rawText, isSettled = false) {
 
   // We have BDS tags, but do we have tags that should HIDE the original message?
   // AUTO tags should NOT hide the message, EXCEPT for AUTO:CODE_RUNNER which has a UI card.
-  const hasHidingTags = /(<BDS:(?!AUTO:(?!CODE_RUNNER|REQUEST_WEB_FETCH|REQUEST_GITHUB_FETCH))[a-zA-Z0-9_:]+|<BetterDeepSeek>|Bds create file>)/i.test(text);
+  const hasHidingTags = /(<BDS:(?!AUTO:(?!CODE_RUNNER|REQUEST_WEB_FETCH|REQUEST_GITHUB_FETCH|SEARCH))[a-zA-Z0-9_:]+|<BetterDeepSeek>|Bds create file>)/i.test(text);
   result.containsControlTags = hasHidingTags;
   result.longWorkOpen = /<BDS:LONG_WORK>/i.test(text);
   result.longWorkClose = /<\/BDS:LONG_WORK>/i.test(text);
@@ -204,8 +205,17 @@ export function parseBdsMessage(rawText, isSettled = false) {
   while ((match = autoYouTubeFetchRegex.exec(text)) !== null) {
      const cleanUrl = String(match[1] || "").trim();
      if (cleanUrl) {
-       result.autoRequests.youtubeFetch.push(cleanUrl);
+        result.autoRequests.youtubeFetch.push(cleanUrl);
      }
+  }
+
+  const autoSearchRegex = /<BDS:AUTO:SEARCH([^>]*)>([\s\S]*?)<\/BDS:AUTO:SEARCH>/gi;
+  while ((match = autoSearchRegex.exec(text)) !== null) {
+     const query = String(match[2] || "").trim();
+     if (!query) continue;
+     const attrs = parseTagAttributes(match[1] || "");
+     const deepFetch = Math.max(0, parseInt(attrs.deepFetch, 10) || 0);
+     result.autoRequests.searchQueries.push({ query, deepFetch });
   }
 
   const selfClosingCreateRegex = /<BDS:create_file\s+([^>]*)\/>/gi;

@@ -37,7 +37,7 @@
     "longWork": { "enabled": true },
     "rag": { "enabled": true },
     "characterRp": { "enabled": true },
-    "autoFetch": { "web": true, "github": true, "twitter": true, "youtube": true },
+    "autoFetch": { "web": true, "github": true, "twitter": true, "youtube": true, "search": true },
     "expandToggle": { "collapseLongMessages": true },
     "questionPanel": { "enabled": true },
     "codeRunner": { "enabled": true },

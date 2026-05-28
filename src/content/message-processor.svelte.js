@@ -20,7 +20,7 @@ import { upsertSkills } from "./parser/skill-parser.js";
 import { collectLongWorkFiles, finalizeLongWork, emitZipForFiles } from "./files/long-work.js";
 import { emitStandaloneFiles } from "./files/standalone.js";
 import { getOrCreateHost } from "./dom/host.js";
-import { handleAutoWebFetch, handleAutoGitHubFetch, handleAutoTwitterFetch, handleAutoYouTubeFetch } from "./auto.js";
+import { handleAutoWebFetch, handleAutoGitHubFetch, handleAutoTwitterFetch, handleAutoYouTubeFetch, handleAutoSearch } from "./auto.js";
 
 import { mount, unmount } from "svelte";
 import MessageOverlay from "./ui/MessageOverlay.svelte";
@@ -171,7 +171,8 @@ export function processMessageNode(node) {
   const autoRequestsAvailable = parsed.autoRequests.webFetch.length > 0 ||
     parsed.autoRequests.githubFetch.length > 0 ||
     parsed.autoRequests.twitterFetch.length > 0 ||
-    parsed.autoRequests.youtubeFetch.length > 0;
+    parsed.autoRequests.youtubeFetch.length > 0 ||
+    parsed.autoRequests.searchQueries.length > 0;
 
   if (isLatestAssistant && autoRequestsAvailable) {
     // isSystemGenerating() checks for the stop button (square SVG icon).
@@ -183,6 +184,7 @@ export function processMessageNode(node) {
       if (!stateData.autoGitHubFetchesHandled) stateData.autoGitHubFetchesHandled = new Set();
       if (!stateData.autoTwitterFetchesHandled) stateData.autoTwitterFetchesHandled = new Set();
       if (!stateData.autoYouTubeFetchesHandled) stateData.autoYouTubeFetchesHandled = new Set();
+      if (!stateData.autoSearchQueriesHandled) stateData.autoSearchQueriesHandled = new Set();
 
       for (const url of parsed.autoRequests.webFetch) {
         if (!stateData.autoWebFetchesHandled.has(url)) {
@@ -209,6 +211,13 @@ export function processMessageNode(node) {
         if (!stateData.autoYouTubeFetchesHandled.has(videoUrl)) {
           stateData.autoYouTubeFetchesHandled.add(videoUrl);
           handleAutoYouTubeFetch(videoUrl);
+        }
+      }
+
+      for (const { query, deepFetch } of parsed.autoRequests.searchQueries) {
+        if (!stateData.autoSearchQueriesHandled.has(query)) {
+          stateData.autoSearchQueriesHandled.add(query);
+          handleAutoSearch(query, deepFetch);
         }
       }
     } else if (!stateData.autoTimer) {

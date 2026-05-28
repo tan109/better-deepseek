@@ -4,6 +4,7 @@
  */
 
 import { fetchAndConvertWebPage } from "./files/web-reader.js";
+import { searchWeb } from "./files/search-reader.js";
 import { fetchGitHubRepo } from "./files/github-reader.js";
 import { fetchTwitterTweet } from "./files/twitter-reader.js";
 import { fetchYouTubeData } from "./files/youtube-reader.js";
@@ -23,6 +24,7 @@ const processedWebFetches = new Set();
 const processedGitHubFetches = new Set();
 const processedTwitterFetches = new Set();
 const processedYouTubeFetches = new Set();
+const processedSearchQueries = new Set();
 
 export async function handleAutoWebFetch(url) {
   if (processedWebFetches.has(url)) return;
@@ -109,6 +111,33 @@ export async function handleAutoYouTubeFetch(url) {
     const errorBlob = new Blob([`Failed to fetch YouTube video ${url}:\n\n${err.message}`], { type: "text/plain" });
     const errorFile = new File([errorBlob], `youtube_error_${url.replace(/[^a-zA-Z0-9]/g, "_")}.txt`, { type: "text/plain" });
     injectFileAndSend(errorFile, `<BetterDeepSeek>\n[BDS:AUTO] YouTube fetch failed for ${url}\n</BetterDeepSeek>`);
+  }
+}
+
+/**
+ * Handles automatic web search requests via DuckDuckGo Lite.
+ * @param {string} query - Search query
+ * @param {number} [deepFetch=0] - Number of top results to also fetch full content for
+ */
+export async function handleAutoSearch(query, deepFetch = 0) {
+  if (processedSearchQueries.has(query)) return;
+  processedSearchQueries.add(query);
+
+  console.log(`[BDS:AUTO] Starting automatic search for: ${query}${deepFetch > 0 ? ` (deepFetch=${deepFetch})` : ""}`);
+
+  try {
+    const file = await searchWeb(query, deepFetch, (status) => {
+      console.log(`[BDS:AUTO] Search Status: ${status}`);
+    });
+
+    if (file) {
+      injectFileAndSend(file, `<BetterDeepSeek>\n[BDS:AUTO] Search Result for: ${query}\n</BetterDeepSeek>`);
+    }
+  } catch (err) {
+    console.error("[BDS:AUTO] Search Failed:", err);
+    const errorBlob = new Blob([`Failed to search "${query}":\n\n${err.message}`], { type: "text/plain" });
+    const errorFile = new File([errorBlob], `search_error_${query.replace(/[^a-zA-Z0-9]/g, "_")}.txt`, { type: "text/plain" });
+    injectFileAndSend(errorFile, `<BetterDeepSeek>\n[BDS:AUTO] Search failed for: ${query}\n</BetterDeepSeek>`);
   }
 }
 

@@ -4,5 +4,11 @@
     "show": true,
     "message": "Due to issues with DeepSeek or intentional behavior, file uploading is currently unavailable in Expert mode.",
     "type": "warning"
+  },
+  {
+    "id": "expert-mode-web-search-removed-v1",
+    "show": true,
+    "message": "DeepSeek removed Web Search from Expert Mode. We are working to bring it back. You can test the developer build from our GitHub repository.",
+    "type": "warning"
   }
 ]
