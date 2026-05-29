@@ -211,13 +211,13 @@ describe("searchWeb", () => {
     ON_STATUS.mockReset();
   });
 
-  it("fetches search results and returns a markdown File", async () => {
+  it("fetches search results and returns a markdown File with metadata", async () => {
     const html = makeResultHtml([
       { title: "Result One", url: "https://one.com", snippet: "First snippet" },
     ]);
     chromeSendMessageMock.mockResolvedValue({ ok: true, html });
 
-    const file = await searchWeb("test query", 0, ON_STATUS);
+    const result = await searchWeb("test query", 0, ON_STATUS);
 
     expect(chromeSendMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -225,10 +225,18 @@ describe("searchWeb", () => {
         url: expect.stringContaining(encodeURIComponent("test query")),
       })
     );
-    expect(file).toBeInstanceOf(File);
-    expect(file.name).toMatch(/\.md$/);
-    expect(file.type).toBe("text/markdown");
-    const text = await readFileAsText(file);
+    expect(result.file).toBeInstanceOf(File);
+    expect(result.file.name).toMatch(/\.md$/);
+    expect(result.file.type).toBe("text/markdown");
+    expect(result.query).toBe("test query");
+    expect(result.deepFetch).toBe(0);
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0]).toEqual({
+      title: "Result One",
+      url: "https://one.com",
+      snippet: "First snippet",
+    });
+    const text = await readFileAsText(result.file);
     expect(text).toContain("# Search Results: test query");
     expect(text).toContain("## 1. Result One");
     expect(ON_STATUS).toHaveBeenCalled();
@@ -274,9 +282,11 @@ describe("searchWeb", () => {
       type: "text/markdown",
     });
 
-    const file = await searchWeb("test", 2, ON_STATUS);
-    const text = await readFileAsText(file);
+    const result = await searchWeb("test", 2, ON_STATUS);
+    const text = await readFileAsText(result.file);
 
+    expect(result.deepFetch).toBe(2);
+    expect(result.results).toHaveLength(3);
     expect(fetchAndConvertWebPageMock).toHaveBeenCalledTimes(2);
     expect(fetchAndConvertWebPageMock).toHaveBeenCalledWith("https://a.com", expect.any(Function));
     expect(fetchAndConvertWebPageMock).toHaveBeenCalledWith("https://b.com", expect.any(Function));
@@ -299,9 +309,10 @@ describe("searchWeb", () => {
       type: "text/markdown",
     });
 
-    const file = await searchWeb("test", 999, ON_STATUS);
-    const text = await readFileAsText(file);
+    const result = await searchWeb("test", 999, ON_STATUS);
+    const text = await readFileAsText(result.file);
 
+    expect(result.deepFetch).toBe(5);
     expect(fetchAndConvertWebPageMock).toHaveBeenCalledTimes(5);
     expect(text).toContain("Page Content: R4");
     expect(text).not.toContain("Page Content: R5");
@@ -322,8 +333,8 @@ describe("searchWeb", () => {
       })
       .mockRejectedValueOnce(new Error("page error"));
 
-    const file = await searchWeb("test", 2, ON_STATUS);
-    const text = await readFileAsText(file);
+    const result = await searchWeb("test", 2, ON_STATUS);
+    const text = await readFileAsText(result.file);
 
     expect(text).toContain("Page Content: Good");
     expect(text).toContain("# Good content");
@@ -337,7 +348,7 @@ describe("searchWeb", () => {
     ]);
     chromeSendMessageMock.mockResolvedValue({ ok: true, html });
 
-    const file = await searchWeb("Hello World! @#$", 0, ON_STATUS);
-    expect(file.name).toBe("hello-world------search.md");
+    const result = await searchWeb("Hello World! @#$", 0, ON_STATUS);
+    expect(result.file.name).toBe("hello-world------search.md");
   });
 });

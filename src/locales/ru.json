@@ -328,6 +328,11 @@
       "hideOutput": "Скрыть вывод ▴",
       "showOutput": "Показать вывод ▾"
     },
+    "searchResult": {
+      "searching": "Поиск DuckDuckGo...",
+      "resultsFor": "Результаты поиска: {{query}}",
+      "resultCount": "Найдено {{count}} результатов"
+    },
     "autoCodeRunner": {
       "aiWantsToRun": "ИИ хочет выполнить код {{lang}}",
       "safeSandbox": "Код будет выполнен в безопасной изолированной среде.",
@@ -440,6 +445,7 @@
       "skillActive": "Активный навык: <strong>{{name}}</strong>",
       "webFetchRequested": "Веб-страница загружается",
       "githubFetchRequested": "GitHub репозиторий загружается",
+      "searchRequested": "Поиск DuckDuckGo...",
       "memoryStored": "Память сохранена ({{count}})."
     },
     "savedItems": {

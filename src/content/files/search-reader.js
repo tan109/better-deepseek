@@ -126,7 +126,7 @@ function formatDeepFetchContent(title, url, markdown) {
  * @param {string} query - Search query
  * @param {number} [deepFetch=0] - Number of top results to also fetch full content for
  * @param {(status: string) => void} [onStatus] - Optional status callback
- * @returns {Promise<File>} A markdown file with search results
+ * @returns {Promise<{file: File, results: Array<{title: string, url: string, snippet: string}>, query: string, deepFetch: number}>}
  */
 export { parseSearchResults, formatSearchResults, formatDeepFetchContent, extractUrlFromDdgLink };
 
@@ -192,5 +192,6 @@ export async function searchWeb(query, deepFetch = 0, onStatus = () => {}) {
     .replace(/[^a-z0-9]/g, "-")
     .slice(0, 50) + "-search.md";
 
-  return new File([blob], safeFilename, { type: "text/markdown" });
+  const file = new File([blob], safeFilename, { type: "text/markdown" });
+  return { file, results, query: trimmedQuery, deepFetch: safeDeepFetch };
 }

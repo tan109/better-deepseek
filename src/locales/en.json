@@ -331,6 +331,11 @@
       "hideOutput": "Hide Output ▴",
       "showOutput": "Show Output ▾"
     },
+    "searchResult": {
+      "searching": "Searching DuckDuckGo...",
+      "resultsFor": "Search Results: {{query}}",
+      "resultCount": "{{count}} results found"
+    },
     "autoCodeRunner": {
       "aiWantsToRun": "AI wants to run {{lang}} code",
       "safeSandbox": "This will execute in a safe sandbox.",
@@ -443,6 +448,7 @@
       "skillActive": "Active skill: <strong>{{name}}</strong>",
       "webFetchRequested": "Web page is being fetched",
       "githubFetchRequested": "GitHub repository is being fetched",
+      "searchRequested": "Searching DuckDuckGo...",
       "memoryStored": "Memory stored ({{count}})."
     },
     "sidebarMenu": {

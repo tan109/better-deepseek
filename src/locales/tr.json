@@ -328,6 +328,11 @@
       "hideOutput": "Çıktıyı Gizle ▴",
       "showOutput": "Çıktıyı Göster ▾"
     },
+    "searchResult": {
+      "searching": "DuckDuckGo aranıyor...",
+      "resultsFor": "Arama Sonuçları: {{query}}",
+      "resultCount": "{{count}} sonuç bulundu"
+    },
     "autoCodeRunner": {
       "aiWantsToRun": "Yapay zeka {{lang}} kodu çalıştırmak istiyor",
       "safeSandbox": "Bu kod güvenli bir tarayıcı sanal alanında (sandbox) yürütülecektir.",
@@ -440,6 +445,7 @@
       "skillActive": "Aktif yetenek: <strong>{{name}}</strong>",
       "webFetchRequested": "Web sayfası getiriliyor",
       "githubFetchRequested": "GitHub deposu getiriliyor",
+      "searchRequested": "DuckDuckGo aranıyor...",
       "memoryStored": "Bellek kaydedildi ({{count}})."
     },
     "savedItems": {

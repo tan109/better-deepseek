@@ -211,6 +211,8 @@ export const DEFAULT_SYSTEM_PROMPT = [
   "- Read the search results carefully and provide a grounded answer with source citations.",
   "- If deepFetch was used, full page content is also provided for accuracy.",
   "- Always cite sources from the search results in your answer.",
+  "- If you need more detail from a specific result, fetch individual pages with:",
+  "  <BDS:AUTO:REQUEST_WEB_FETCH>full_page_url</BDS:AUTO:REQUEST_WEB_FETCH>",
   "",
   "DO NOT USE FOR:",
   "- Simple questions you already know the answer to",

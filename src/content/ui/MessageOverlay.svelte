@@ -7,6 +7,7 @@
   import DocxCard from "./DocxCard.svelte";
   import AutoCodeRunnerCard from "./AutoCodeRunnerCard.svelte";
   import AutoCodeResultCard from "./AutoCodeResultCard.svelte";
+  import SearchResultCard from "./SearchResultCard.svelte";
   import LoadingIndicator from "./LoadingIndicator.svelte";
   import { t } from "../../lib/i18n.svelte.js";
 
@@ -127,6 +128,21 @@
             <div class="bds-question-subtitle">{block.content}</div>
           </div>
         </div>
+      {:else if block.name === 'auto:search'}
+        <div class="bds-question-info-card bds-search-info-card">
+          <div class="bds-question-icon bds-search-info-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+          <div class="bds-question-content">
+            <div class="bds-question-title">{t('messageOverlay.searchRequested')}</div>
+            <div class="bds-question-subtitle">{block.content}</div>
+          </div>
+        </div>
+      {:else if block.name === 'auto_search_result'}
+        <SearchResultCard query={block.attrs.query} count={block.attrs.count} results={block.content} />
       {:else if block.name === 'memory_write'}
         <div class="bds-question-info-card bds-memory-card">
           <div class="bds-question-icon bds-memory-icon">
@@ -225,6 +241,15 @@
 
   .bds-github-fetch-card {
     border-left: 3px solid #6e40c9;
+  }
+
+  .bds-search-info-icon {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .bds-search-info-card {
+    border-left: 3px solid #22c55e;
   }
 
   .bds-memory-icon {

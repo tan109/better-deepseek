@@ -17,7 +17,7 @@ import { parseMemoryWrite } from "./memory-parser.js";
 import { sanitizeVisibleText } from "./text-sanitizer.js";
 
 // Tool renderers that have visual cards
-const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "skill_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch"]);
+const RENDERABLE_TOOLS = new Set(["html", "latex", "visualizer", "pptx", "excel", "docx", "ask_question", "character_create", "skill_create", "auto:code_runner", "auto_code_result", "auto:request_web_fetch", "auto:request_github_fetch", "auto:search"]);
 
 /**
  * Parse a raw message text for all BDS tags.
@@ -78,7 +78,7 @@ export function parseBdsMessage(rawText, isSettled = false) {
   }
 
   // We have BDS tags, but do we have tags that should HIDE the original message?
-  // AUTO tags should NOT hide the message, EXCEPT for AUTO:CODE_RUNNER which has a UI card.
+  // AUTO tags should NOT hide the message, EXCEPT for AUTO:CODE_RUNNER, AUTO:REQUEST_WEB_FETCH, AUTO:REQUEST_GITHUB_FETCH, and AUTO:SEARCH which have UI cards.
   const hasHidingTags = /(<BDS:(?!AUTO:(?!CODE_RUNNER|REQUEST_WEB_FETCH|REQUEST_GITHUB_FETCH|SEARCH))[a-zA-Z0-9_:]+|<BetterDeepSeek>|Bds create file>)/i.test(text);
   result.containsControlTags = hasHidingTags;
   result.longWorkOpen = /<BDS:LONG_WORK>/i.test(text);

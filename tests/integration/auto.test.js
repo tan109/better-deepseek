@@ -122,7 +122,12 @@ describe("auto integration", () => {
 
   it("searches and injects the returned file once", async () => {
     const file = new File(["# Search Results"], "query.md", { type: "text/markdown" });
-    readerMocks.searchWeb.mockResolvedValue(file);
+    readerMocks.searchWeb.mockResolvedValue({
+      file,
+      results: [{ title: "R1", url: "https://a.com", snippet: "snippet" }],
+      query: "test query",
+      deepFetch: 3,
+    });
     const { handleAutoSearch } = await importAutoModule();
 
     await handleAutoSearch("test query", 3);
@@ -135,13 +140,18 @@ describe("auto integration", () => {
     expect(readerMocks.searchWeb).toHaveBeenCalledWith("test query", 3, expect.any(Function));
     expect(input.files).toHaveLength(1);
     expect(editor.value).toContain("Search Result");
+    expect(editor.value).toContain("[BDS:AUTO_SEARCH_RESULT]");
+    expect(editor.value).toContain("[/BDS:AUTO_SEARCH_RESULT]");
     expect(sendButton.click).toHaveBeenCalledOnce();
   });
 
   it("prevents duplicate auto search requests for the same query", async () => {
-    readerMocks.searchWeb.mockResolvedValue(
-      new File(["results"], "q.md", { type: "text/markdown" }),
-    );
+    readerMocks.searchWeb.mockResolvedValue({
+      file: new File(["results"], "q.md", { type: "text/markdown" }),
+      results: [],
+      query: "same query",
+      deepFetch: 0,
+    });
     const { handleAutoSearch } = await importAutoModule();
 
     await handleAutoSearch("same query");

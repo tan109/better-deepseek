@@ -32,6 +32,7 @@ const messageOverlays = new Map();
 const nodeStates = new WeakMap();
 const userMsgCleaned = new WeakSet();
 const readMessages = new WeakSet();
+const processedSearchResultCards = new WeakSet();
 
 function getNodeState(node) {
   let s = nodeStates.get(node);
@@ -89,11 +90,56 @@ export function processMessageNode(node) {
           existing.props.blocks = newBlocks;
         } else {
           const host = getOrCreateHost(node, "bds-overlay-host");
+          removeStaleMessageOverlays(host);
           const props = $state({ text: "", blocks: newBlocks, loading: false });
           const component = mount(MessageOverlay, { target: host, props });
           messageOverlays.set(node, { component, props });
         }
         syncVisibilityState(node, false, stateData, true);
+      }
+    }
+
+    // --- SEARCH RESULT CARD (USER) ---
+    if (rawUserText.includes("[BDS:AUTO] Search Result for:")) {
+      const queryMatch = rawUserText.match(/\[BDS:AUTO\] Search Result for:\s*(.+?)(?:\n|$)/);
+      const query = queryMatch ? queryMatch[1].trim() : "";
+
+      const jsonMatch = rawUserText.match(/\[BDS:AUTO_SEARCH_RESULT\]\s*([\s\S]*?)\s*\[\/BDS:AUTO_SEARCH_RESULT\]/);
+      if (jsonMatch) {
+        let parsedCount = "0";
+        let parsedDeepFetch = "0";
+        let parsedResults = "[]";
+        try {
+          const data = JSON.parse(jsonMatch[1].trim());
+          parsedResults = JSON.stringify(data.results || []);
+          parsedCount = String(data.count ?? data.results?.length ?? 0);
+          parsedDeepFetch = String(data.deepFetch ?? 0);
+        } catch (e) {
+          console.error("[BDS:AUTO_SEARCH_RESULT] Failed to parse JSON:", e);
+        }
+
+        if (query && !processedSearchResultCards.has(node)) {
+          processedSearchResultCards.add(node);
+          stateData.hasControlTags = true;
+
+          const existing = messageOverlays.get(node);
+          const newBlocks = [{
+            name: "auto_search_result",
+            attrs: { query, count: parsedCount, deepFetch: parsedDeepFetch },
+            content: parsedResults
+          }];
+
+          if (existing) {
+            existing.props.blocks = newBlocks;
+          } else {
+            const host = getOrCreateHost(node, "bds-overlay-host");
+            removeStaleMessageOverlays(host);
+            const props = $state({ text: "", blocks: newBlocks, loading: false });
+            const component = mount(MessageOverlay, { target: host, props });
+            messageOverlays.set(node, { component, props });
+          }
+          syncVisibilityState(node, false, stateData, true);
+        }
       }
     }
 
