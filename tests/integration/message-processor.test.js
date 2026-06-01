@@ -345,8 +345,8 @@ describe("bookmark button injection", () => {
     expect(btn).not.toBeNull();
     expect(btn.getAttribute("role")).toBe("button");
     expect(btn.querySelector(".ds-icon svg")).not.toBeNull();
-    expect(btn.querySelector(".ds-icon-button__hover-bg")).not.toBeNull();
-    expect(btn.querySelector(".ds-focus-ring")).not.toBeNull();
+    expect(btn.querySelector(".ds-button__background")).not.toBeNull();
+    expect(btn.querySelector(".ds-button__icon")).not.toBeNull();
   });
 
   it("injects bookmark button into assistant message action bar", () => {

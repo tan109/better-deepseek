@@ -1734,6 +1734,9 @@ textarea.bds-input,
 }
 
 /* ── Bookmark Button ── */
+.bds-bookmark-btn {
+  color: var(--ds-text-tertiary, var(--ds-text-secondary, #666));
+}
 .bds-bookmark-btn--active .ds-icon svg {
   fill: currentColor;
 }

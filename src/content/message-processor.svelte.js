@@ -920,8 +920,8 @@ function injectBookmarkButton(node) {
 
   if (!container) return;
 
-  const siblingBtn = container.querySelector('[class*="ds-icon-button"]');
-  const baseClass = siblingBtn ? siblingBtn.className.replace(/bds-bookmark-btn[^\s]*/g, "").trim() : "ds-icon-button ds-icon-button--m ds-icon-button--sizing-container";
+  const siblingBtn = container.querySelector('[class*="ds-button"]');
+  const baseClass = siblingBtn ? siblingBtn.className.replace(/bds-bookmark-btn[^\s]*/g, "").trim() : "ds-button ds-button--iconLabelTertiary ds-button--icon ds-button--capsule ds-button--xs";
 
   const btn = document.createElement("div");
   btn.className = baseClass + " bds-bookmark-btn" + (isBookmarked ? " bds-bookmark-btn--active" : "");
@@ -931,13 +931,14 @@ function injectBookmarkButton(node) {
   btn.title = isBookmarked ? i18n.t('savedItems.removeBookmark') : i18n.t('savedItems.bookmarkThis');
 
   btn.innerHTML = [
-    '<div class="ds-icon-button__hover-bg"></div>',
+    '<div class="ds-button__background"></div>',
+    '<div class="ds-button__icon ds-button__icon--last-child">',
     '<div class="ds-icon">',
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="' + (isBookmarked ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
     '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>',
     '</svg>',
     '</div>',
-    '<div class="ds-focus-ring"></div>'
+    '</div>',
   ].join("");
 
   btn.addEventListener("click", async (e) => {
