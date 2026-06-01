@@ -21,11 +21,6 @@
  *   pickFiles(mode: String, requestId: String): void
  *     // mode: "files" | "folder"; result delivered as
  *     // CustomEvent("__bds_native_files_picked_" + requestId)
- *
- * Reserved storage keys (shared with MainActivity / WebViewBridge):
- *   "bds_locale" — DeepSeek UI locale code (e.g. "tr", "en"), synced from
- *   localStorage.__appKit_@deepseek/chat_localePreference by the locale-watcher
- *   script injected in onPageFinished, and restored in onPageStarted.
  */
 
 function getBridge() {

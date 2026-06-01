@@ -9,7 +9,6 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -67,24 +66,6 @@ class WebViewBridgeTest {
     @After
     fun tearDown() {
         server.shutdown()
-    }
-
-    // ── locale persistence ───────────────────────────────────────────────
-
-    @Test
-    fun `KEY_PERSISTED_LOCALE is a non-empty string`() {
-        assertTrue(WebViewBridge.KEY_PERSISTED_LOCALE.isNotEmpty())
-    }
-
-    @Test
-    fun `persisted locale round-trips through setStorage and getStorage`() {
-        `when`(prefs.getString(WebViewBridge.KEY_PERSISTED_LOCALE, null)).thenReturn("tr")
-        assertEquals("tr", bridge.getStorage(WebViewBridge.KEY_PERSISTED_LOCALE))
-    }
-
-    @Test
-    fun `persisted locale key does not collide with page dark key`() {
-        assertNotEquals(WebViewBridge.KEY_LAST_PAGE_DARK, WebViewBridge.KEY_PERSISTED_LOCALE)
     }
 
     // ── storage ─────────────────────────────────────────────────────────

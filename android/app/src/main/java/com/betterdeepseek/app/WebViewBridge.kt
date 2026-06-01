@@ -783,13 +783,6 @@ class WebViewBridge(
         // so getLastKnownIsDark() and the polyfill share the same SharedPreferences key.
         internal const val KEY_LAST_PAGE_DARK = "bds_page_is_dark"
 
-        /**
-         * SharedPreferences key for the DeepSeek UI locale persisted from localStorage.
-         * Written by the locale-watcher script in MainActivity.injectBdsScripts and read by
-         * MainActivity.restoreLocale when the WebView process restarts.
-         */
-        internal const val KEY_PERSISTED_LOCALE = "bds_locale"
-
         /** Max bytes per native-picked text file. */
         internal const val MAX_PICKED_FILE_SIZE = 2L * 1024 * 1024
 

@@ -281,14 +281,6 @@ class MainActivity : ComponentActivity() {
                     return null
                 }
 
-                override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    if (url.isNullOrEmpty()) return
-                    if (url.startsWith("https://chat.deepseek.com")) {
-                        restoreLocale(view)
-                    }
-                }
-
                 override fun onPageFinished(view: WebView, url: String?) {
                     super.onPageFinished(view, url)
                     if (url.isNullOrEmpty()) return
@@ -443,53 +435,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ── Locale persistence ────────────────────────────────────────────────
-
-    /**
-     * Restore the DeepSeek UI locale from SharedPreferences into localStorage and patch
-     * navigator.language / navigator.languages so DeepSeek's client-side fallback picks up the
-     * correct language.
-     *
-     * Called from [WebViewClient.onPageStarted] — before DeepSeek's own JavaScript executes — so
-     * the very first render and the synchronous i18n init both see the right value.
-     */
-    private fun restoreLocale(view: WebView) {
-        val localeCode = bridge.getStorage(WebViewBridge.KEY_PERSISTED_LOCALE)
-        if (localeCode.isNullOrEmpty() || localeCode.length > 10) return
-
-        val codeLiteral = jsStringLiteral(localeCode)
-        val script =
-                """
-            (function () {
-                try {
-                    var saved = $codeLiteral;
-                    var KEY = '__appKit_@deepseek/chat_localePreference';
-                    localStorage.setItem(KEY, JSON.stringify({value: saved, __version: '0'}));
-                    try {
-                        Object.defineProperty(navigator, 'language', {
-                            get: function () { return saved; },
-                            configurable: true
-                        });
-                    } catch (e) {
-                        navigator.__defineGetter__('language', function () { return saved; });
-                    }
-                    try {
-                        Object.defineProperty(navigator, 'languages', {
-                            get: function () { return [saved]; },
-                            configurable: true
-                        });
-                    } catch (e) {
-                        navigator.__defineGetter__('languages', function () { return [saved]; });
-                    }
-                } catch (e) {
-                    console.warn('[BDS] locale restore error', e);
-                }
-            })();
-        """.trimIndent()
-
-        view.evaluateJavascript(script, null)
-    }
-
     // ── BDS script injection ─────────────────────────────────────────────
 
     /**
@@ -589,32 +534,6 @@ class MainActivity : ComponentActivity() {
             })();
         """.trimIndent()
 
-        val localePersister =
-                """
-            (function () {
-                if (window.__bdsLocalePersister) return;
-                window.__bdsLocalePersister = true;
-                var KEY = '__appKit_@deepseek/chat_localePreference';
-                var SAVE_KEY = '${WebViewBridge.KEY_PERSISTED_LOCALE}';
-                function persist() {
-                    try {
-                        var raw = localStorage.getItem(KEY);
-                        if (!raw) return;
-                        var parsed = JSON.parse(raw);
-                        if (parsed && parsed.value) {
-                            AndroidBridge.setStorage(SAVE_KEY, parsed.value);
-                        }
-                    } catch (e) {}
-                }
-                persist();
-                var orig = localStorage.setItem;
-                localStorage.setItem = function (k, v) {
-                    orig.call(localStorage, k, v);
-                    if (k === KEY) { persist(); }
-                };
-            })();
-        """.trimIndent()
-
         view.evaluateJavascript(injected, null)
         view.evaluateJavascript(bootstrap, null)
         // content.js calls startThemeWatcher() which persists pageIsDark via chrome.storage and
@@ -622,7 +541,6 @@ class MainActivity : ComponentActivity() {
         view.evaluateJavascript(content, null)
         view.evaluateJavascript(hideGetApp, null)
         view.evaluateJavascript(hideDrawerItem, null)
-        view.evaluateJavascript(localePersister, null)
     }
 
     private fun readAsset(path: String): String? =
