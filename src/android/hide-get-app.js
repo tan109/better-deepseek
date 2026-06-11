@@ -1,6 +1,6 @@
 /**
  * Hides the "Get App" promotional button injected by chat.deepseek.com on mobile viewports.
- * Called by MainActivity.injectBdsScripts() on every page finish.
+ * Installed by src/platform/globals-android.js when the Android content bundle starts.
  *
  * Detection is text-based ("Get App" span) and only requires a button-like ancestor
  * so it survives DeepSeek's dynamic tag/class churn.
