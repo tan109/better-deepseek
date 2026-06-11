@@ -44,6 +44,24 @@ internal fun applyRootWindowInsets(view: View, windowInsets: WindowInsetsCompat)
     return WindowInsetsCompat.CONSUMED
 }
 
+internal fun shouldOpenExternally(url: Uri, assetHost: String = "bds-asset.local"): Boolean {
+    val scheme = url.scheme?.lowercase() ?: return false
+    if (scheme != "http" && scheme != "https") return false
+
+    val host = url.host?.lowercase() ?: return false
+    if (host == assetHost.lowercase()) return false
+    if (host == "deepseek.com" || host.endsWith(".deepseek.com")) return false
+    if (
+            host == "accounts.google.com" ||
+                    host.endsWith(".accounts.google.com") ||
+                    host == "accounts.youtube.com"
+    ) {
+        return false
+    }
+
+    return true
+}
+
 /**
  * Single-activity host. Loads chat.deepseek.com inside a full-screen WebView and injects the BDS
  * extension scripts on every page finish.
@@ -296,6 +314,17 @@ class MainActivity : ComponentActivity() {
                     return null
                 }
 
+                override fun shouldOverrideUrlLoading(
+                        view: WebView,
+                        request: WebResourceRequest
+                ): Boolean {
+                    val url = request.url ?: return false
+                    if (!shouldOpenExternally(url, getString(R.string.bds_asset_authority))) {
+                        return false
+                    }
+                    return openExternalUrl(url)
+                }
+
                 override fun onPageFinished(view: WebView, url: String?) {
                     super.onPageFinished(view, url)
                     if (url.isNullOrEmpty()) return
@@ -340,6 +369,15 @@ class MainActivity : ComponentActivity() {
                         isUserGesture: Boolean,
                         resultMsg: android.os.Message?
                 ): Boolean {
+                    val targetUrl = view?.hitTestResult?.extra
+                    if (!targetUrl.isNullOrBlank()) {
+                        val uri = Uri.parse(targetUrl)
+                        if (shouldOpenExternally(uri, getString(R.string.bds_asset_authority))) {
+                            openExternalUrl(uri)
+                            return false
+                        }
+                    }
+
                     val transport = resultMsg?.obj as? WebView.WebViewTransport
                     val stub = WebView(this@MainActivity)
                     transport?.webView = stub
@@ -349,6 +387,18 @@ class MainActivity : ComponentActivity() {
             }
 
     // ── OAuth proxy ──────────────────────────────────────────────────────
+
+    private fun openExternalUrl(url: Uri): Boolean {
+        return runCatching {
+                    val intent =
+                            Intent(Intent.ACTION_VIEW, url).apply {
+                                addCategory(Intent.CATEGORY_BROWSABLE)
+                            }
+                    startActivity(intent)
+                }
+                .onFailure { Log.w(TAG, "Failed to open external URL: $url", it) }
+                .isSuccess
+    }
 
     /** Domains that must be proxied so the OAuth code_verifier state survives. */
     private fun isGoogleOAuthUrl(url: Uri): Boolean {
