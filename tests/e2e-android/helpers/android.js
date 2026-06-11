@@ -117,9 +117,9 @@ async function routeFixtureRequests(context) {
 }
 
 export const test = base.extend({
-  context: async ({ browser }, use) => {
+  context: async ({ browser, contextOptions }, use) => {
     ensureBuildExists();
-    const context = await browser.newContext();
+    const context = await browser.newContext(contextOptions);
 
     // Pre-page: mock AndroidBridge.
     await context.addInitScript({ content: buildAndroidBridgeBootstrap() });
@@ -180,6 +180,8 @@ export const test = base.extend({
     const page = await context.newPage();
     await page.goto("https://chat.deepseek.com/");
     await page.waitForSelector("#bds-toggle");
+    await page.waitForSelector(".bds-plus-btn");
+    await expect(page.locator(".bds-plus-btn").first()).toBeInViewport();
     await use(page);
   },
 });

@@ -173,7 +173,7 @@ function scanPage() {
  * Scan for the chat text input area to inject custom attachment menu
  */
 export function scanInputArea() {
-  const fileInput = document.querySelector('input[type="file"][multiple]');
+  const fileInput = findActiveFileInput();
   const wrapper = findComposerControlsWrapper(fileInput);
   const deepResearchWrapper = findDeepResearchControlsWrapper(fileInput, wrapper);
   if (!deepResearchWrapper) {
@@ -256,6 +256,52 @@ export function scanInputArea() {
   }
 
   markComposerControlsMounted(wrapper);
+}
+
+function findActiveFileInput() {
+  const inputs = Array.from(document.querySelectorAll('input[type="file"][multiple]'))
+    .filter((input) => !input.closest("#bds-root"));
+
+  return inputs.find((input) =>
+    isUsableComposerElement(input.parentElement || input)
+  ) || inputs[0] || null;
+}
+
+function isUsableComposerElement(element) {
+  if (!element || element.closest("#bds-root")) {
+    return false;
+  }
+
+  for (let node = element; node && node !== document.body; node = node.parentElement) {
+    const style = window.getComputedStyle?.(node);
+    if (
+      node.hidden ||
+      node.getAttribute("aria-hidden") === "true" ||
+      style?.display === "none" ||
+      style?.visibility === "hidden"
+    ) {
+      return false;
+    }
+  }
+
+  const rect = element.getBoundingClientRect?.();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  if (
+    rect &&
+    viewportWidth > 0 &&
+    viewportHeight > 0 &&
+    (rect.width > 0 || rect.height > 0)
+  ) {
+    return (
+      rect.right >= 0 &&
+      rect.bottom >= 0 &&
+      rect.left <= viewportWidth &&
+      rect.top <= viewportHeight
+    );
+  }
+
+  return true;
 }
 
 function markComposerControlsMounted(...wrappers) {

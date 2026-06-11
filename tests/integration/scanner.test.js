@@ -99,6 +99,27 @@ describe("scanner input controls", () => {
     expect(document.querySelector("#native-upload").style.display).toBe("none");
   });
 
+  it("mounts attach controls on the visible composer when stale upload inputs remain", async () => {
+    document.body.innerHTML = `
+      <div id="stale-composer" style="display: none">
+        <button id="stale-upload" type="button"></button>
+        <input type="file" multiple />
+      </div>
+      <div id="active-composer">
+        <button id="active-upload" type="button"></button>
+        <input type="file" multiple />
+      </div>
+    `;
+    const { scanInputArea } = await import("../../src/content/scanner.js");
+
+    scanInputArea();
+
+    expect(document.querySelector("#stale-composer .bds-attach-menu-mount")).toBeNull();
+    expect(document.querySelector("#active-composer .bds-attach-menu-mount")).toBeTruthy();
+    expect(document.querySelector("#active-upload").style.display).toBe("none");
+    expect(document.querySelector("#stale-upload").style.display).not.toBe("none");
+  });
+
   it("does not hide unrelated composer buttons when mounting controls", async () => {
     document.body.innerHTML = `
       <div id="composer">
