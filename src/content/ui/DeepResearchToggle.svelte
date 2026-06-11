@@ -51,7 +51,7 @@
     <path d="M5 19v2"></path>
     <path d="M6 20H4"></path>
   </svg>
-  <span class="bds-drt-label">{localEnabled ? "Research ON" : "Research"}</span>
+  <span class="bds-drt-label">DeepResearch</span>
 </button>
 
 <style>
@@ -60,9 +60,9 @@
     align-items: center !important;
     justify-content: center !important;
     flex: 0 0 auto !important;
-    width: 32px !important;
-    height: 32px !important;
-    margin-right: 2px !important;
+    width: auto !important;
+    height: 42px !important;
+    margin-right: 8px !important;
   }
 
   .bds-deep-research-toggle {
@@ -72,40 +72,50 @@
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    gap: 8px !important;
     flex: 0 0 auto !important;
-    width: 32px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
-    height: 32px !important;
-    min-height: 32px !important;
-    max-height: 32px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
     margin: 0 !important;
-    padding: 0 !important;
-    border: 0 !important;
-    border-radius: 50% !important;
-    background: transparent !important;
-    color: var(--bds-accent, #4f8cff) !important;
+    padding: 0 17px !important;
+    border: 1px solid var(--bds-border, rgba(255, 255, 255, 0.16)) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    color: var(--bds-text-primary, #f5f7fb) !important;
     box-shadow: none !important;
     cursor: pointer !important;
-    line-height: 0 !important;
+    line-height: 1 !important;
     font: inherit !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
     text-align: center !important;
     white-space: nowrap !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     transition:
       background-color var(--bds-transition, 0.18s ease),
+      border-color var(--bds-transition, 0.18s ease),
       color var(--bds-transition, 0.18s ease),
       transform 0.1s ease;
   }
 
   .bds-deep-research-toggle:hover {
-    background-color: var(--bds-accent-glow, rgba(79, 140, 255, 0.14)) !important;
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: var(--bds-border-hover, rgba(255, 255, 255, 0.24)) !important;
   }
 
   .bds-deep-research-toggle.active {
     background-color: var(--bds-accent-glow, rgba(79, 140, 255, 0.18)) !important;
+    border-color: var(--bds-accent, #4f8cff) !important;
     color: var(--bds-accent, #4f8cff) !important;
-    box-shadow: inset 0 0 0 1px currentColor !important;
+  }
+
+  .bds-deep-research-toggle.active:hover {
+    background-color: var(--bds-accent-glow, rgba(79, 140, 255, 0.22)) !important;
+    border-color: var(--bds-accent, #4f8cff) !important;
   }
 
   .bds-deep-research-toggle:active {
@@ -120,14 +130,11 @@
   }
 
   .bds-drt-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
+    display: inline-block;
+    min-width: 0;
+    line-height: 1;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    text-overflow: ellipsis;
     white-space: nowrap;
-    border: 0;
   }
 </style>
