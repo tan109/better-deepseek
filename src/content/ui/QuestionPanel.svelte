@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import appState from "../state.js";
   import { t } from "../../lib/i18n.svelte.js";
+  import { injectPureTextAndSend } from "../auto.js";
 
   let questions = $state([]);
   let answers = $state({});
@@ -38,8 +39,8 @@
 
     const handleKeyDown = (e) => {
       if (!visible || questions.length === 0) return;
-      
-      if (document.activeElement && document.activeElement.tagName === "INPUT") {
+
+      if (isTypingTarget(document.activeElement)) {
         return;
       }
 
@@ -88,14 +89,15 @@
 
   function attachToPromptBox() {
     if (!panelElement) return;
-    
+
+    const editor = findPromptEditor();
     const target = document.querySelector("._75e1990") || 
                    document.querySelector("._6f68655") || 
                    document.querySelector("._77cefa5") || 
                    document.querySelector("._24fad49") || 
                    document.querySelector(".ds-textarea") || 
-                   findTextarea()?.closest(".ds-textarea") ||
-                   findTextarea()?.parentElement;
+                   editor?.closest(".ds-textarea") ||
+                   editor?.parentElement;
 
     if (target) {
       if (panelElement.parentElement !== target) {
@@ -111,10 +113,40 @@
     }
   }
 
-  function findTextarea() {
-    return document.querySelector("textarea#chat-input") || 
-           document.querySelector(".ds-textarea textarea") || 
-           document.querySelector("textarea");
+  function findPromptEditor() {
+    const selectors = [
+      "textarea#chat-input",
+      ".ds-textarea textarea",
+      '[role="textbox"][contenteditable]',
+      '[role="textbox"]',
+      ".ProseMirror[contenteditable]",
+      "textarea[placeholder]",
+      "input[placeholder]",
+      "[contenteditable]",
+      "textarea",
+    ];
+
+    for (const selector of selectors) {
+      const matches = Array.from(document.querySelectorAll(selector));
+      const editor = matches.find((candidate) => !isBdsPanelElement(candidate));
+      if (editor) return editor;
+    }
+
+    return null;
+  }
+
+  function isBdsPanelElement(element) {
+    return Boolean(element?.closest?.("#bds-root, .bds-question-panel, .bds-dr-revision-panel"));
+  }
+
+  function isTypingTarget(element) {
+    if (!element) return false;
+    const tagName = String(element.tagName || "").toLowerCase();
+    if (tagName === "input" || tagName === "textarea" || tagName === "select") return true;
+    if (element.isContentEditable) return true;
+
+    const editableParent = element.closest?.("[contenteditable]");
+    return Boolean(editableParent && editableParent.getAttribute("contenteditable") !== "false");
   }
 
   function prevQuestion() {
@@ -263,55 +295,9 @@
   }
 
   function injectTextIntoDeepSeek(text) {
-    const textarea = findTextarea();
-    if (!textarea) {
+    if (!injectPureTextAndSend(text, "Question panel answer")) {
       if (appState.ui) appState.ui.showToast(t('questionPanel.noInputField'));
-      return;
     }
-
-    textarea.value = text;
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-
-    setTimeout(robustSend, 300);
-  }
-
-  function robustSend() {
-    let attempts = 0;
-    const maxAttempts = 50;
-
-    const attempt = () => {
-      attempts++;
-      const buttons = Array.from(document.querySelectorAll('div[role="button"], button'));
-      const sendBtn = buttons.find(b => {
-        const isSend = b.querySelector('svg path[d*="M8.3125"], .ds-icon-send') || 
-                       b.querySelector('svg path[d*="M13.12 19.98"]') ||
-                       b.title === "Send message" || 
-                       b.ariaLabel === "Send Message";
-        const isAttach = b.classList.contains('bds-plus-btn') || b.querySelector('svg line');
-        return isSend && !isAttach;
-      });
-
-      if (sendBtn) {
-        const isDisabled = sendBtn.getAttribute("aria-disabled") === "true" || 
-                           sendBtn.classList.contains("ds-icon-button--disabled");
-        
-        if (!isDisabled) {
-          sendBtn.click();
-          return;
-        }
-      }
-
-      if (attempts < maxAttempts) {
-        setTimeout(attempt, 200);
-      } else {
-        const textarea = findTextarea();
-        if (textarea) {
-          textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, keyCode: 13 }));
-        }
-      }
-    };
-
-    attempt();
   }
 
   function dismiss() {

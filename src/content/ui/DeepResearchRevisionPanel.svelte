@@ -15,7 +15,10 @@
       plan = detail.plan || null;
       feedbackText = "";
       visible = true;
-      setTimeout(attachToPromptBox, 100);
+      setTimeout(() => {
+        attachToPromptBox();
+        focusFeedbackInput();
+      }, 100);
     };
 
     window.addEventListener("bds:deep-research-open-revision", handleOpenRevision);
@@ -33,13 +36,14 @@
   function attachToPromptBox() {
     if (!panelElement) return;
 
+    const editor = findEditor();
     const target = document.querySelector("._75e1990") ||
                    document.querySelector("._6f68655") ||
                    document.querySelector("._77cefa5") ||
                    document.querySelector("._24fad49") ||
                    document.querySelector(".ds-textarea") ||
-                   findEditor()?.closest(".ds-textarea") ||
-                   findEditor()?.parentElement;
+                   editor?.closest(".ds-textarea") ||
+                   editor?.parentElement;
 
     if (target && panelElement.parentElement !== target) {
       const activeElement = document.activeElement;
@@ -52,13 +56,33 @@
   }
 
   function findEditor() {
-    return document.querySelector("textarea#chat-input") ||
-           document.querySelector(".ds-textarea textarea") ||
-           document.querySelector('[role="textbox"][contenteditable]') ||
-           document.querySelector(".ProseMirror[contenteditable]") ||
-           document.querySelector("[contenteditable]") ||
-           document.querySelector("textarea") ||
-           document.querySelector("input[placeholder]");
+    const selectors = [
+      "textarea#chat-input",
+      ".ds-textarea textarea",
+      '[role="textbox"][contenteditable]',
+      '[role="textbox"]',
+      ".ProseMirror[contenteditable]",
+      "textarea[placeholder]",
+      "input[placeholder]",
+      "[contenteditable]",
+      "textarea",
+    ];
+
+    for (const selector of selectors) {
+      const matches = Array.from(document.querySelectorAll(selector));
+      const editor = matches.find((candidate) => !isBdsPanelElement(candidate));
+      if (editor) return editor;
+    }
+
+    return null;
+  }
+
+  function isBdsPanelElement(element) {
+    return Boolean(element?.closest?.("#bds-root, .bds-question-panel, .bds-dr-revision-panel"));
+  }
+
+  function focusFeedbackInput() {
+    panelElement?.querySelector?.(".bds-dr-revision-input")?.focus();
   }
 
   function submitFeedback(event) {
@@ -108,6 +132,7 @@
       class="bds-dr-revision-input"
       placeholder="Describe what should change in the research plan..."
       bind:value={feedbackText}
+      onpointerdown={stopNativeEvent}
       onmousedown={stopNativeEvent}
       onclick={stopNativeEvent}
       onkeydown={stopNativeEvent}

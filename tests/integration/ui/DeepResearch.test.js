@@ -171,6 +171,29 @@ describe("Deep Research UI components", () => {
         vi.useRealTimers();
       }
     });
+
+    it("attaches to a contenteditable composer and focuses the feedback input", async () => {
+      vi.useFakeTimers();
+      try {
+        document.body.innerHTML = '<div class="composer-shell"><div role="textbox" contenteditable="plaintext-only"></div></div>';
+        const { cleanup } = renderSvelte(DeepResearchRevisionPanel);
+        await flushUi();
+
+        window.dispatchEvent(new CustomEvent("bds:deep-research-open-revision", {
+          detail: { runId: "run-contenteditable", plan: { title: "Plan", steps: [] } },
+        }));
+        await vi.advanceTimersByTimeAsync(150);
+        await flushUi();
+
+        const panel = document.querySelector('[data-testid="deep-research-revision-panel"]');
+        const input = document.querySelector('[data-testid="deep-research-revision-input"]');
+        expect(panel?.parentElement?.classList.contains("composer-shell")).toBe(true);
+        expect(document.activeElement).toBe(input);
+        cleanup();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe("DeepResearchStatusCard", () => {
