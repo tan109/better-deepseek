@@ -39,6 +39,7 @@
       (typeof navigator !== "undefined" ? navigator.language : "en-US"),
   );
   let autoSubmitVoice = $state(Boolean(appState.settings.autoSubmitVoice));
+  let vadSilenceTimeout = $state(Number(appState.settings.vadSilenceTimeout) || 1500);
   let preferredLang = $state(appState.settings.preferredLang || "");
   let githubToken = $state(appState.settings.githubToken || "");
   let showGithubToken = $state(shouldShowGithubTokenByDefault(appState.settings.githubToken));
@@ -118,6 +119,7 @@
   function captureFormSnapshot() {
     return JSON.stringify({
       autoFiles, autoZip, voiceMode, voiceLanguage, autoSubmitVoice,
+      vadSilenceTimeout,
       preferredLang, githubToken, disableSystemPrompt,
       systemPromptMultiMode, systemPromptEntries,
       systemPromptInjectionFrequency, systemPromptInjectionInterval,
@@ -391,6 +393,7 @@
       appState.settings.voiceLanguage ||
       (typeof navigator !== "undefined" ? navigator.language : "en-US");
     autoSubmitVoice = Boolean(appState.settings.autoSubmitVoice);
+    vadSilenceTimeout = Number(appState.settings.vadSilenceTimeout) || 1500;
     preferredLang = appState.settings.preferredLang || "";
     githubToken = appState.settings.githubToken || "";
     showGithubToken = shouldShowGithubTokenByDefault(githubToken);
@@ -611,6 +614,7 @@
     appState.settings.voiceMode = voiceMode;
     appState.settings.voiceLanguage = voiceLanguage;
     appState.settings.autoSubmitVoice = autoSubmitVoice;
+    appState.settings.vadSilenceTimeout = Math.max(500, Math.min(3000, Math.round(vadSilenceTimeout)));
     appState.settings.preferredLang = preferredLang.trim();
     appState.settings.githubToken = githubToken.trim();
     appState.settings.disableSystemPrompt = disableSystemPrompt;
@@ -1318,6 +1322,21 @@
     </div>
 
     <div class="bds-toggle-row">
+      <span class="bds-toggle-label">{t('settings.vadSilenceTimeout')}</span>
+      <div class="bds-slider-group">
+        <input
+          type="range"
+          min="500"
+          max="3000"
+          step="100"
+          bind:value={vadSilenceTimeout}
+          class="bds-slider"
+        />
+        <span class="bds-slider-value">{(vadSilenceTimeout / 1000).toFixed(1)}s</span>
+      </div>
+    </div>
+
+    <div class="bds-toggle-row">
       <span class="bds-toggle-label">{t('settings.autoDownloadZip')}</span>
       <label class="bds-switch">
         <input id="bds-auto-zip" type="checkbox" bind:checked={autoZip} />
@@ -1998,5 +2017,56 @@
 
   .bds-exit-edit-btn:hover {
     opacity: 0.8;
+  }
+
+  .bds-slider-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    max-width: 200px;
+  }
+
+  .bds-slider {
+    flex: 1;
+    height: 4px;
+    appearance: none;
+    background: var(--bds-border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .bds-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bds-accent);
+    border: 2px solid var(--bds-bg-panel);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+
+  .bds-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+
+  .bds-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bds-accent);
+    border: 2px solid var(--bds-bg-panel);
+    cursor: pointer;
+  }
+
+  .bds-slider-value {
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: right;
+    color: var(--bds-text-primary);
+    font-variant-numeric: tabular-nums;
   }
 </style>

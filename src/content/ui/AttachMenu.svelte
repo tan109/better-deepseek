@@ -28,6 +28,7 @@
   import { BRIDGE_EVENTS } from "../../lib/constants.js";
   import { t } from "../../lib/i18n.svelte.js";
   import { getFlag, getConfig, REMOTE_CONFIG_EVENT, detectModelType } from "../../lib/remote-config.svelte.js";
+  import { VADProcessor } from "../vad-processor.js";
 
   // The native input[type="file"] reference passed from scanner
   let { nativeInput } = $props();
@@ -67,6 +68,9 @@
   // Speech Recognition state
   let isRecording = $state(false);
   let recognition = null;
+
+  // VAD state
+  let vadProcessor = null;
 
   // Replaced at build time by Vite's `define` (see build.js sharedDefine).
   // Vite inlines the literal string, e.g. `process.env.BDS_TARGET` → `"android"`,
@@ -163,8 +167,18 @@
     }
   }
 
+  let latestTranscript = "";
+  let accumulatedTranscript = "";
+  let currentSessionText = "";
+  let shouldStop = false;
+  let restartAttempts = 0;
+  let destroyed = false;
+  const MAX_RESTART_ATTEMPTS = 5;
+
   function toggleSpeechRecognition() {
     if (isRecording) {
+      shouldStop = true;
+      stopVAD();
       if (recognition) recognition.stop();
       isRecording = false;
       return;
@@ -179,6 +193,11 @@
     }
 
     stopTTS();
+    latestTranscript = "";
+    accumulatedTranscript = "";
+    currentSessionText = "";
+    shouldStop = false;
+    restartAttempts = 0;
 
     recognition = new SpeechRecognition();
     recognition.lang =
@@ -191,25 +210,132 @@
     };
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0])
-        .map((result) => result.transcript)
-        .join("");
+      currentSessionText = "";
+      for (let i = 0; i < event.results.length; i++) {
+        currentSessionText += event.results[i][0].transcript;
+      }
 
-      injectTextIntoDeepSeek(transcript, event.results[0].isFinal);
+      latestTranscript = accumulatedTranscript
+        ? accumulatedTranscript + " " + currentSessionText
+        : currentSessionText;
+
+      injectTextIntoDeepSeek(latestTranscript, false);
     };
 
     recognition.onerror = (event) => {
       console.error("Speech Recognition Error:", event.error);
+      if (event.target !== recognition) return;
+      if (event.error === 'no-speech' && vadProcessor && vadProcessor.state === 'speaking') {
+        console.warn("[BDS] VAD says speaking, ignoring Chrome no-speech error");
+        recognition.stop();
+        return;
+      }
+      shouldStop = true;
       isRecording = false;
+      stopVAD();
+      accumulatedTranscript = "";
+      currentSessionText = "";
+      latestTranscript = "";
       if (appState.ui) appState.ui.showToast(t('attachMenu.voiceError', { msg: event.error }));
     };
 
     recognition.onend = () => {
       isRecording = false;
+      if (destroyed) return;
+
+      if (shouldStop) {
+        stopVAD();
+        if (latestTranscript.trim() && appState.settings.autoSubmitVoice) {
+          injectTextIntoDeepSeek(latestTranscript, true);
+        }
+        accumulatedTranscript = "";
+        currentSessionText = "";
+        shouldStop = false;
+        return;
+      }
+
+      if (currentSessionText.trim()) {
+        accumulatedTranscript += (accumulatedTranscript ? " " : "") + currentSessionText;
+        currentSessionText = "";
+        latestTranscript = accumulatedTranscript;
+      }
+
+      const isUserActive = vadProcessor && vadProcessor.state === 'speaking';
+
+      if (isUserActive && restartAttempts < MAX_RESTART_ATTEMPTS) {
+        restartAttempts++;
+        tryRestartRecognition();
+        return;
+      }
+
+      stopVAD();
+      if (accumulatedTranscript.trim() && appState.settings.autoSubmitVoice) {
+        injectTextIntoDeepSeek(accumulatedTranscript, true);
+      }
+      if (restartAttempts >= MAX_RESTART_ATTEMPTS && appState.ui) {
+        appState.ui.showToast(t('attachMenu.voiceError', { msg: 'recognition failed' }));
+      }
+      accumulatedTranscript = "";
+      currentSessionText = "";
     };
 
     recognition.start();
+    startVAD();
+  }
+
+  function tryRestartRecognition() {
+    try {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const newRec = new SR();
+      newRec.lang = recognition.lang;
+      newRec.interimResults = true;
+      newRec.continuous = false;
+      newRec.onstart = recognition.onstart;
+      newRec.onresult = recognition.onresult;
+      newRec.onerror = recognition.onerror;
+      newRec.onend = recognition.onend;
+      recognition = newRec;
+      recognition.start();
+    } catch (e) {
+      console.warn("[BDS] Failed to restart recognition:", e);
+      isRecording = false;
+      stopVAD();
+      if (accumulatedTranscript.trim() && appState.settings.autoSubmitVoice) {
+        injectTextIntoDeepSeek(accumulatedTranscript, true);
+      }
+      accumulatedTranscript = "";
+      currentSessionText = "";
+    }
+  }
+
+  function startVAD() {
+    try {
+      const processor = new VADProcessor({
+        silenceTimeout: appState.settings.vadSilenceTimeout || 1500,
+      });
+
+      processor.onVADStop = () => {
+        if (destroyed) return;
+        shouldStop = true;
+        if (recognition) recognition.stop();
+      };
+
+      vadProcessor = processor;
+      processor.start().catch((err) => {
+        console.warn("[BDS] VAD init failed:", err);
+        stopVAD();
+      });
+    } catch (err) {
+      console.warn("[BDS] VAD not supported:", err);
+      vadProcessor = null;
+    }
+  }
+
+  function stopVAD() {
+    if (vadProcessor) {
+      vadProcessor.stop();
+      vadProcessor = null;
+    }
   }
 
   function injectTextIntoDeepSeek(text, isFinal) {
@@ -358,6 +484,7 @@
     window.addEventListener(REMOTE_CONFIG_EVENT, onConfigOrStateUpdate);
 
     return () => {
+      destroyed = true;
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
       window.removeEventListener(REMOTE_CONFIG_EVENT, onConfigOrStateUpdate);
@@ -365,6 +492,8 @@
         appState.heroBarRef = null;
       }
       if (modelObserver) modelObserver.disconnect();
+      recognition?.abort?.();
+      stopVAD();
     };
   });
 

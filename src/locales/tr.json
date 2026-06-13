@@ -93,6 +93,7 @@
       "voiceMode": "Ses Modu (Yanıtları otomatik oku)",
       "autoSubmitVoice": "Konuşma bitince otomatik gönder",
       "speechLanguage": "Konuşma Dili",
+      "vadSilenceTimeout": "Sessizlik zaman aşımı",
       "autoDownloadZip": "LONG_WORK zip dosyasını otomatik indir",
       "preferredLang": "Tercih Edilen Yanıt Dili",
       "preferredLangPlaceholder": "Örn. Türkçe, İngilizce, Göktürkçe...",

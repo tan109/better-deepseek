@@ -93,6 +93,7 @@
       "voiceMode": "Voice Mode (Auto-read responses)",
       "autoSubmitVoice": "Auto-submit after speech",
       "speechLanguage": "Speech Language",
+      "vadSilenceTimeout": "Silence timeout",
       "autoDownloadZip": "Auto download LONG_WORK zip",
       "preferredLang": "Preferred Response Language",
       "preferredLangPlaceholder": "e.g. English, Turkish, Pirate",

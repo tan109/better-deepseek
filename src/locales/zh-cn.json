@@ -93,6 +93,7 @@
       "voiceMode": "语音模式（自动朗读回复）",
       "autoSubmitVoice": "语音输入后自动发送",
       "speechLanguage": "语音语言",
+      "vadSilenceTimeout": "静音超时",
       "autoDownloadZip": "自动下载 LONG_WORK 压缩包",
       "preferredLang": "偏好回复语言",
       "preferredLangPlaceholder": "例如：中文、英文",

@@ -677,6 +677,7 @@ export const DEFAULT_SETTINGS = {
   voiceMode: false,
   voiceLanguage: (typeof navigator !== 'undefined' ? navigator.language : 'en-US'),
   autoSubmitVoice: true,
+  vadSilenceTimeout: 1500,
   preferredLang: "",
   disableSystemPrompt: false,
   disableMemory: false,

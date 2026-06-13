@@ -93,6 +93,7 @@
       "voiceMode": "Голосовой режим (авто-чтение ответов)",
       "autoSubmitVoice": "Автоотправка после речи",
       "speechLanguage": "Язык речи",
+      "vadSilenceTimeout": "Тайм-аут тишины",
       "autoDownloadZip": "Автоскачивание LONG_WORK архива",
       "preferredLang": "Предпочтительный язык ответа",
       "preferredLangPlaceholder": "Например, Русский, Английский",
