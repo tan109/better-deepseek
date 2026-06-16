@@ -303,6 +303,8 @@ describe("searchWeb", () => {
     expect(result.query).toBe("test query");
     expect(result.deepFetch).toBe(0);
     expect(result.provider).toBe("DuckDuckGo");
+    expect(result.effectiveQuery).toBeUndefined();
+    expect(result.rawResultCount).toBe(1);
     expect(result.results).toHaveLength(1);
     expect(result.results[0]).toEqual({
       title: "Result One",
@@ -348,6 +350,57 @@ describe("searchWeb", () => {
     expect(ON_STATUS).toHaveBeenCalledWith("Searching Bing...");
   });
 
+  it("adds purpose and sourceType query shaping only when metadata is provided", async () => {
+    const html = makeResultHtml([
+      { title: "Python 3.13 release notes", url: "https://docs.python.org/3.13/whatsnew/3.13.html", snippet: "Official documentation." },
+    ]);
+    chromeSendMessageMock.mockResolvedValue({ ok: true, html });
+
+    const result = await searchWeb("Python 3.13 release notes", 0, ON_STATUS, {
+      purpose: "confirm official changes and migration details",
+      sourceType: "docs",
+    });
+
+    expect(result.effectiveQuery).toContain("Python 3.13 release notes");
+    expect(chromeSendMessageMock.mock.calls[0][0].url).toContain(
+      encodeURIComponent(result.effectiveQuery)
+    );
+  });
+
+  it("falls back to Bing when DuckDuckGo results are weak", async () => {
+    chromeSendMessageMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        html: makeResultHtml([
+          {
+            title: "Developer tools overview",
+            url: "https://example.com/dev-tools",
+            snippet: "A general overview of developer tools.",
+          },
+        ]),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        html: makeBingResultHtml([
+          {
+            title: "DeepSeek API documentation",
+            url: "https://platform.deepseek.com/api-docs",
+            snippet: "Official API docs and reference for DeepSeek.",
+          },
+        ]),
+      });
+
+    const result = await searchWeb("DeepSeek API docs", 0, ON_STATUS, {
+      purpose: "find official reference",
+      sourceType: "docs",
+    });
+
+    expect(result.provider).toBe("Bing");
+    expect(result.results[0].url).toBe("https://platform.deepseek.com/api-docs");
+  });
+
   it("throws on empty query", async () => {
     await expect(searchWeb("")).rejects.toThrow("Search query is empty");
     await expect(searchWeb("   ")).rejects.toThrow("Search query is empty");
@@ -372,6 +425,45 @@ describe("searchWeb", () => {
     const html = "<html><body>no results</body></html>";
     chromeSendMessageMock.mockResolvedValue({ ok: true, html });
     await expect(searchWeb("test")).rejects.toThrow("No search results found");
+  });
+
+  it("returns the best ranked weak provider when both providers are weak", async () => {
+    chromeSendMessageMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        html: makeResultHtml([
+          {
+            title: "Laptop reviews 2025 shortlist",
+            url: "https://example.com/laptop-shortlist",
+            snippet: "Shortlist of laptop reviews for 2025 buyers.",
+          },
+          {
+            title: "Generic buyer guide",
+            url: "https://example.com/buyer-guide",
+            snippet: "General shopping guide.",
+          },
+        ]),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        html: makeBingResultHtml([
+          {
+            title: "Buying a laptop",
+            url: "https://bing-example.com/laptop-buying",
+            snippet: "High-level laptop buying advice.",
+          },
+        ]),
+      });
+
+    const result = await searchWeb("laptop reviews 2025", 0, ON_STATUS, {
+      purpose: "compare current options",
+      sourceType: "reviews",
+    });
+
+    expect(result.provider).toBe("DuckDuckGo");
+    expect(result.results[0].title).toBe("Laptop reviews 2025 shortlist");
   });
 
   it("deepFetch reads top N pages", async () => {
@@ -399,6 +491,26 @@ describe("searchWeb", () => {
     expect(text).toContain("Page Content: A");
     expect(text).toContain("Page Content: B");
     expect(text).not.toContain("Page Content: C");
+  });
+
+  it("deepFetch follows ranked result order instead of provider order", async () => {
+    const html = makeResultHtml([
+      { title: "Benchmark category overview", url: "https://example.com/overview", snippet: "General benchmark information." },
+      { title: "Claude Sonnet benchmark 2025", url: "https://example.com/claude-sonnet-2025", snippet: "Exact 2025 benchmark data for Claude Sonnet." },
+    ]);
+    chromeSendMessageMock.mockResolvedValue({ ok: true, html });
+    fetchAndConvertWebPageMock.mockResolvedValue({
+      text: async () => "# Deep content",
+      name: "page.md",
+      type: "text/markdown",
+    });
+
+    await searchWeb('"Claude Sonnet" benchmark 2025', 1, ON_STATUS);
+
+    expect(fetchAndConvertWebPageMock).toHaveBeenCalledWith(
+      "https://example.com/claude-sonnet-2025",
+      expect.any(Function)
+    );
   });
 
   it("deepFetch clamps to MAX_DEEP_FETCH", async () => {

@@ -34,6 +34,20 @@ const userMsgCleaned = new WeakSet();
 const readMessages = new WeakSet();
 const processedSearchResultCards = new WeakSet();
 
+function normalizeSearchKeyPart(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function getSearchRequestKey(query, runId, purpose, sourceType) {
+  const baseKey = runId ? `${runId}\n${normalizeSearchKeyPart(query)}` : normalizeSearchKeyPart(query);
+  const normalizedPurpose = normalizeSearchKeyPart(purpose);
+  const normalizedSourceType = normalizeSearchKeyPart(sourceType);
+  if (!normalizedPurpose && !normalizedSourceType) {
+    return baseKey;
+  }
+  return [baseKey, normalizedPurpose, normalizedSourceType].join("\n");
+}
+
 function getNodeState(node) {
   let s = nodeStates.get(node);
   if (!s) {
@@ -260,14 +274,14 @@ export function processMessageNode(node) {
         }
       }
 
-      for (const { query, deepFetch, runId } of parsed.autoRequests.searchQueries) {
-        const searchKey = runId ? `${runId}\n${query}` : query;
+      for (const { query, deepFetch, runId, purpose, sourceType } of parsed.autoRequests.searchQueries) {
+        const searchKey = getSearchRequestKey(query, runId, purpose, sourceType);
         if (!stateData.autoSearchQueriesHandled.has(searchKey)) {
           stateData.autoSearchQueriesHandled.add(searchKey);
           if (runId) {
-            handleAutoSearchForRun(query, deepFetch, runId);
+            handleAutoSearchForRun(query, deepFetch, runId, { purpose, sourceType });
           } else {
-            handleAutoSearch(query, deepFetch);
+            handleAutoSearch(query, deepFetch, { purpose, sourceType });
           }
         }
       }
@@ -1166,4 +1180,3 @@ function cleanupUserMessageCollapse(node, stateData, textContainer) {
     stateData.expandBtn = null;
   }
 }
-

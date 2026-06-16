@@ -45,6 +45,8 @@ describe("Deep Research payload mutation", () => {
     expect(content).toContain("[BDS:DEEP_RESEARCH] Deep Research mode is enabled");
     expect(content).toContain('<BDS:DEEP_RESEARCH_PLAN runId="run_laptops">');
     expect(content).toContain("Research gaming laptop listings under $1500.");
+    expect(content).toContain('"sourceType"');
+    expect(content).toContain("named entities");
     expect(state.config.deepResearch.enabled).toBe(false);
     expect(listener).toHaveBeenCalledOnce();
     expect(JSON.parse(listener.mock.calls[0][0].detail).runId).toBe("run_laptops");

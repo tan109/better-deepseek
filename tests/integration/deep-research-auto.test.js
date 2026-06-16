@@ -104,6 +104,23 @@ describe("Deep Research run-scoped search dedupe", () => {
     expect(queries.has("q2")).toBe(true);
   });
 
+  it("deduplicates by query plus metadata within the same run", async () => {
+    readerMocks.searchWeb.mockResolvedValue({
+      query: "q1",
+      deepFetch: 0,
+      results: [],
+      file: new File(["x"], "s.md", { type: "text/plain" }),
+    });
+
+    const auto = await importAutoModule();
+
+    await auto.handleAutoSearchForRun("q1", 0, "runMeta", { purpose: "overview", sourceType: "general" });
+    await auto.handleAutoSearchForRun("q1", 0, "runMeta", { purpose: "overview", sourceType: "docs" });
+    await auto.handleAutoSearchForRun("q1", 0, "runMeta", { purpose: "overview", sourceType: "docs" });
+
+    expect(readerMocks.searchWeb).toHaveBeenCalledTimes(2);
+  });
+
   it("clearRunSearchHistory removes run data", async () => {
     readerMocks.searchWeb.mockResolvedValue({
       query: "clear test",

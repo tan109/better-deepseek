@@ -171,7 +171,22 @@ Findings.</BDS:DEEP_RESEARCH_REPORT>`;
       const result = parseBdsMessage(text);
 
       expect(result.autoRequests.searchQueries).toEqual([
-        { query: "gaming laptop reviews", deepFetch: 2, runId: "run42" },
+        { query: "gaming laptop reviews", deepFetch: 2, runId: "run42", purpose: "", sourceType: "" },
+      ]);
+    });
+
+    it("parses purpose and sourceType from search tags", () => {
+      const text = '<BDS:AUTO:SEARCH runId="run42" deepFetch="2" purpose="compare thermals" sourceType="reviews">gaming laptop reviews 2025</BDS:AUTO:SEARCH>';
+      const result = parseBdsMessage(text);
+
+      expect(result.autoRequests.searchQueries).toEqual([
+        {
+          query: "gaming laptop reviews 2025",
+          deepFetch: 2,
+          runId: "run42",
+          purpose: "compare thermals",
+          sourceType: "reviews",
+        },
       ]);
     });
   });

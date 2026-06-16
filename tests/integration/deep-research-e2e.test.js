@@ -27,6 +27,7 @@ describe("Deep Research E2E mock flow", () => {
     const planningPrompt = buildPlanningPrompt(run.id, "Best laptops under $1500 for programming in 2025");
     expect(planningPrompt).toContain("Best laptops under $1500");
     expect(planningPrompt).toContain(run.id);
+    expect(planningPrompt).toContain('"sourceType"');
 
     // Step 2: DeepSeek responds with a plan
     const planResponse = `<BDS:DEEP_RESEARCH_PLAN runId="${run.id}">{"title":"Best Programming Laptops Under $1500","steps":[{"id":1,"action":"search","query":"best programming laptops under 1500 2025","purpose":"Get overview of top options"},{"id":2,"action":"search","query":"ThinkPad X1 Carbon vs MacBook Air M3 programming","purpose":"Compare top contenders"},{"id":3,"action":"fetch","query":"https://notebookcheck.net/best-programming-laptops.html","purpose":"Detailed specs comparison"},{"id":4,"action":"search","query":"laptop battery life programming 2025 reviews","purpose":"Battery life data"}]}</BDS:DEEP_RESEARCH_PLAN>`;
@@ -61,6 +62,7 @@ describe("Deep Research E2E mock flow", () => {
     const approvalMsg = buildApprovalMessage(run);
     expect(approvalMsg).toContain("Plan approved");
     expect(approvalMsg).toContain(run.id);
+    expect(approvalMsg).toContain("sourceType");
 
     // Step 6: Research execution begins
     transitionRun(run, "running");

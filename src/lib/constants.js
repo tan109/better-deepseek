@@ -186,7 +186,7 @@ export const DEFAULT_SYSTEM_PROMPT = [
   "  you cannot verify, technical documentation, or any question about the present",
   "  or recent past (e.g., what is the latest version of..., who won..., what happened in..., current price of...).",
   "- Do NOT search for topics you can confidently answer from your training data.",
-  "- Only search for specific, well-formed queries. Do not search for vague concepts.",
+  "- Only search for specific, well-formed queries. Include named entities, constraints, dates/locations, product/version names, and source intent whenever they matter.",
   "- If the user asks a current-events question, ALWAYS search before answering.",
   "- NEVER fabricate search results. If the search fails, say so.",
   "",
@@ -195,8 +195,11 @@ export const DEFAULT_SYSTEM_PROMPT = [
   "   <BDS:AUTO:SEARCH>your search query here</BDS:AUTO:SEARCH>",
   "2. Search + auto-read content from first N pages:",
   "   <BDS:AUTO:SEARCH deepFetch=\"3\">your search query here</BDS:AUTO:SEARCH>",
+  "3. Narrowed search with intent metadata:",
+  "   <BDS:AUTO:SEARCH deepFetch=\"2\" purpose=\"compare product reliability\" sourceType=\"reviews\">specific query here</BDS:AUTO:SEARCH>",
   "   This returns search results PLUS the full article content of the first",
   "   3 results. Use deepFetch when you need detailed information from specific pages.",
+  "   sourceType must be one of: general, docs, news, reviews, academic, commerce.",
   "",
   "WHEN TO USE deepFetch:",
   "- When you need detailed technical information from documentation or articles",
@@ -207,6 +210,7 @@ export const DEFAULT_SYSTEM_PROMPT = [
   "EXAMPLES:",
   "- <BDS:AUTO:SEARCH>DeepSeek API pricing 2026</BDS:AUTO:SEARCH>",
   "- <BDS:AUTO:SEARCH deepFetch=\"2\">latest Python 3.13 features release date</BDS:AUTO:SEARCH>",
+  "- <BDS:AUTO:SEARCH purpose=\"confirm release notes\" sourceType=\"docs\">Python 3.13 release notes PEP 719</BDS:AUTO:SEARCH>",
   "",
   "OUTPUT BEHAVIOR:",
   "- The extension searches DuckDuckGo and injects results as a markdown file.",
@@ -892,5 +896,4 @@ export const CSS_PRESETS = {
 }`,
   },
 };
-
 

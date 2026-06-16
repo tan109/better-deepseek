@@ -186,6 +186,7 @@ describe("Deep Research state machine", () => {
       expect(msg).toContain(run.id);
       expect(msg).toContain("Plan approved");
       expect(msg).toContain("BDS:AUTO:SEARCH");
+      expect(msg).toContain('sourceType="general|docs|news|reviews|academic|commerce"');
       expect(msg).toContain("BDS:DEEP_RESEARCH_REPORT");
     });
 
@@ -207,6 +208,8 @@ describe("Deep Research state machine", () => {
       expect(msg).toContain("Best laptops under $1500");
       expect(msg).toContain("ONLY produce a research plan");
       expect(msg).toContain("BDS:DEEP_RESEARCH_PLAN");
+      expect(msg).toContain('"sourceType"');
+      expect(msg).toContain("named entities");
     });
   });
 

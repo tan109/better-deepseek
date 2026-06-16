@@ -6,6 +6,7 @@
  */
 
 import { fetchAndConvertWebPage } from "./web-reader.js";
+import { buildEffectiveSearchQuery, rankSearchResults } from "./search-quality.js";
 
 const DUCKDUCKGO_SEARCH_URL = "https://lite.duckduckgo.com/lite/?q=";
 const BING_SEARCH_URL = "https://www.bing.com/search?q=";
@@ -278,7 +279,12 @@ function formatDeepFetchContent(title, url, markdown) {
  * @param {string} query - Search query
  * @param {number} [deepFetch=0] - Number of top results to also fetch full content for
  * @param {(status: string) => void} [onStatus] - Optional status callback
- * @returns {Promise<{file: File, results: Array<{title: string, url: string, snippet: string}>, query: string, deepFetch: number, provider: string}>}
+ * @typedef {{
+ *   purpose?: string,
+ *   sourceType?: "general"|"docs"|"news"|"reviews"|"academic"|"commerce"
+ * }} SearchOptions
+ * @param {SearchOptions} [options] - Optional query shaping and ranking hints
+ * @returns {Promise<{file: File, results: Array<{title: string, url: string, snippet: string}>, query: string, deepFetch: number, provider: string, effectiveQuery?: string, rawResultCount: number}>}
  */
 export {
   parseSearchResults,
@@ -288,17 +294,21 @@ export {
   extractUrlFromBingLink,
 };
 
-export async function searchWeb(query, deepFetch = 0, onStatus = () => {}) {
+export async function searchWeb(query, deepFetch = 0, onStatus = () => {}, options = {}) {
   const trimmedQuery = String(query || "").trim();
   if (!trimmedQuery) {
     throw new Error("Search query is empty.");
   }
 
   const safeDeepFetch = Math.max(0, Math.min(MAX_DEEP_FETCH, Number(deepFetch) || 0));
+  const { normalizedQuery, effectiveQuery } = buildEffectiveSearchQuery(trimmedQuery, options);
+  const providerQuery = effectiveQuery || normalizedQuery;
 
   let providerName = "";
   let results = [];
+  let rawResultCount = 0;
   const errors = [];
+  let bestWeakResult = null;
 
   for (const provider of SEARCH_PROVIDERS) {
     onStatus(`Searching ${provider.name}...`);
@@ -307,7 +317,7 @@ export async function searchWeb(query, deepFetch = 0, onStatus = () => {}) {
     try {
       response = await chrome.runtime.sendMessage({
         type: "bds-fetch-url",
-        url: provider.url(trimmedQuery),
+        url: provider.url(providerQuery),
       });
     } catch (err) {
       errors.push(`${provider.name}: ${err.message}`);
@@ -322,9 +332,35 @@ export async function searchWeb(query, deepFetch = 0, onStatus = () => {}) {
     onStatus(`Parsing ${provider.name} results...`);
     const parsedResults = provider.parse(response.html || "");
     if (parsedResults.length > 0) {
-      providerName = provider.name;
-      results = parsedResults;
-      break;
+      const rankedResults = rankSearchResults(trimmedQuery, parsedResults, options);
+      if (
+        !bestWeakResult ||
+        rankedResults.topScore > bestWeakResult.topScore ||
+        (rankedResults.topScore === bestWeakResult.topScore &&
+          rankedResults.results.length > bestWeakResult.results.length)
+      ) {
+        bestWeakResult = {
+          providerName: provider.name,
+          results: rankedResults.results,
+          rawResultCount: rankedResults.rawResultCount,
+          topScore: rankedResults.topScore,
+        };
+      }
+
+      if (rankedResults.results.length === 0) {
+        errors.push(`${provider.name}: no qualifying results`);
+        continue;
+      }
+
+      if (rankedResults.passingCount >= 3 || rankedResults.isStrongTopResult) {
+        providerName = provider.name;
+        results = rankedResults.results;
+        rawResultCount = rankedResults.rawResultCount;
+        break;
+      }
+
+      errors.push(`${provider.name}: weak relevance`);
+      continue;
     }
 
     errors.push(
@@ -337,7 +373,17 @@ export async function searchWeb(query, deepFetch = 0, onStatus = () => {}) {
   }
 
   if (results.length === 0) {
-    const onlyNoResults = errors.length > 0 && errors.every((error) => /: no results$/.test(error));
+    if (bestWeakResult?.results?.length > 0) {
+      providerName = bestWeakResult.providerName;
+      results = bestWeakResult.results;
+      rawResultCount = bestWeakResult.rawResultCount;
+    }
+  }
+
+  if (results.length === 0) {
+    const onlyNoResults =
+      errors.length > 0 &&
+      errors.every((error) => /: no (results|qualifying results)$/.test(error));
     if (onlyNoResults) {
       throw new Error("No search results found for query: " + trimmedQuery);
     }
@@ -376,5 +422,13 @@ export async function searchWeb(query, deepFetch = 0, onStatus = () => {}) {
       .slice(0, 50) + "-search.md";
 
   const file = new File([blob], safeFilename, { type: "text/markdown" });
-  return { file, results, query: trimmedQuery, deepFetch: safeDeepFetch, provider: providerName };
+  return {
+    file,
+    results,
+    query: trimmedQuery,
+    deepFetch: safeDeepFetch,
+    provider: providerName,
+    effectiveQuery,
+    rawResultCount: rawResultCount || results.length,
+  };
 }

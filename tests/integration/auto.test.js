@@ -224,7 +224,7 @@ describe("auto integration", () => {
     const editor = document.querySelector("#chat-input");
     const sendButton = document.querySelector("button");
 
-    expect(readerMocks.searchWeb).toHaveBeenCalledWith("test query", 3, expect.any(Function));
+    expect(readerMocks.searchWeb).toHaveBeenCalledWith("test query", 3, expect.any(Function), {});
     expect(input.files).toHaveLength(1);
     expect(editor.value).toContain("Search Result");
     expect(editor.value).toContain("[BDS:AUTO_SEARCH_RESULT]");
@@ -245,6 +245,29 @@ describe("auto integration", () => {
     await handleAutoSearch("same query");
 
     expect(readerMocks.searchWeb).toHaveBeenCalledOnce();
+  });
+
+  it("treats metadata-bearing searches as distinct dedupe keys", async () => {
+    readerMocks.searchWeb.mockResolvedValue({
+      file: new File(["results"], "q.md", { type: "text/markdown" }),
+      results: [],
+      query: "same query",
+      deepFetch: 0,
+      rawResultCount: 0,
+    });
+    const { handleAutoSearch } = await importAutoModule();
+
+    await handleAutoSearch("same query", 0, { purpose: "overview", sourceType: "general" });
+    await handleAutoSearch("same query", 0, { purpose: "overview", sourceType: "docs" });
+
+    expect(readerMocks.searchWeb).toHaveBeenCalledTimes(2);
+    expect(readerMocks.searchWeb).toHaveBeenNthCalledWith(
+      1,
+      "same query",
+      0,
+      expect.any(Function),
+      { purpose: "overview", sourceType: "general" }
+    );
   });
 
   it("creates an error attachment when search fails", async () => {

@@ -237,7 +237,7 @@ describe("message processor integration", () => {
 
   it("routes run-scoped AUTO search requests to the deep research handler", () => {
     const node = createMessageNode(
-      '<BDS:AUTO:SEARCH runId="run1" deepFetch="2">gaming laptop reviews</BDS:AUTO:SEARCH>',
+      '<BDS:AUTO:SEARCH runId="run1" deepFetch="2" purpose="compare thermals" sourceType="reviews">gaming laptop reviews</BDS:AUTO:SEARCH>',
     );
 
     processMessageNode(node);
@@ -248,6 +248,7 @@ describe("message processor integration", () => {
       "gaming laptop reviews",
       2,
       "run1",
+      { purpose: "compare thermals", sourceType: "reviews" },
     );
     expect(mocks.handleAutoSearch).not.toHaveBeenCalled();
   });

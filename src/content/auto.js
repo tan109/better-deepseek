@@ -29,6 +29,20 @@ const processedSearchQueries = new Set();
 // Per-run search deduplication for deep research
 const processedRunSearchQueries = new Map();
 
+function normalizeSearchKeyPart(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function getSearchDedupeKey(query, options = {}) {
+  const baseKey = normalizeSearchKeyPart(query);
+  const purpose = normalizeSearchKeyPart(options.purpose);
+  const sourceType = normalizeSearchKeyPart(options.sourceType);
+  if (!purpose && !sourceType) {
+    return baseKey;
+  }
+  return [baseKey, purpose, sourceType].join("\n");
+}
+
 export async function handleAutoWebFetch(url) {
   let targetUrl;
   try {
@@ -148,25 +162,32 @@ export async function handleAutoYouTubeFetch(url) {
  * Handles automatic web search requests via DuckDuckGo Lite.
  * @param {string} query - Search query
  * @param {number} [deepFetch=0] - Number of top results to also fetch full content for
+ * @param {{ purpose?: string, sourceType?: "general"|"docs"|"news"|"reviews"|"academic"|"commerce" }} [options]
  */
-export async function handleAutoSearch(query, deepFetch = 0) {
-  const q = query.trim();
-  if (processedSearchQueries.has(q)) return;
-  processedSearchQueries.add(q);
+export async function handleAutoSearch(query, deepFetch = 0, options = {}) {
+  const q = normalizeSearchKeyPart(query);
+  const dedupeKey = getSearchDedupeKey(q, options);
+  if (processedSearchQueries.has(dedupeKey)) return;
+  processedSearchQueries.add(dedupeKey);
 
   console.log(`[BDS:AUTO] Starting automatic search for: ${q}${deepFetch > 0 ? ` (deepFetch=${deepFetch})` : ""}`);
 
   try {
     const result = await searchWeb(q, deepFetch, (status) => {
       console.log(`[BDS:AUTO] Search Status: ${status}`);
-    });
+    }, options);
 
     if (result.file) {
       const payload = JSON.stringify({
         query: result.query,
         deepFetch: result.deepFetch,
         count: result.results.length,
-        results: result.results
+        results: result.results,
+        provider: result.provider,
+        effectiveQuery: result.effectiveQuery,
+        rawResultCount: result.rawResultCount,
+        purpose: options.purpose,
+        sourceType: options.sourceType,
       });
       const autoMessage = [
         `<BetterDeepSeek>`,
@@ -192,27 +213,29 @@ export async function handleAutoSearch(query, deepFetch = 0) {
  * @param {string} query - Search query
  * @param {number} [deepFetch=0] - Number of top results to also fetch full content for
  * @param {string} runId - Deep research run ID
+ * @param {{ purpose?: string, sourceType?: "general"|"docs"|"news"|"reviews"|"academic"|"commerce" }} [options]
  */
-export async function handleAutoSearchForRun(query, deepFetch = 0, runId = "") {
-  const q = query.trim();
+export async function handleAutoSearchForRun(query, deepFetch = 0, runId = "", options = {}) {
+  const q = normalizeSearchKeyPart(query);
+  const dedupeKey = getSearchDedupeKey(q, options);
   if (!runId) {
     // Fallback to global dedupe
-    return handleAutoSearch(q, deepFetch);
+    return handleAutoSearch(q, deepFetch, options);
   }
 
   if (!processedRunSearchQueries.has(runId)) {
     processedRunSearchQueries.set(runId, new Set());
   }
   const runSet = processedRunSearchQueries.get(runId);
-  if (runSet.has(q)) return;
-  runSet.add(q);
+  if (runSet.has(dedupeKey)) return;
+  runSet.add(dedupeKey);
 
   console.log(`[BDS:AUTO] Starting run-scoped search for: ${q} (runId=${runId}, deepFetch=${deepFetch})`);
 
   try {
     const result = await searchWeb(q, deepFetch, (status) => {
       console.log(`[BDS:AUTO] Search Status: ${status}`);
-    });
+    }, options);
 
     if (result.file) {
       const payload = JSON.stringify({
@@ -220,6 +243,11 @@ export async function handleAutoSearchForRun(query, deepFetch = 0, runId = "") {
         deepFetch: result.deepFetch,
         count: result.results.length,
         results: result.results,
+        provider: result.provider,
+        effectiveQuery: result.effectiveQuery,
+        rawResultCount: result.rawResultCount,
+        purpose: options.purpose,
+        sourceType: options.sourceType,
         runId,
       });
       const autoMessage = [

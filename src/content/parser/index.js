@@ -261,7 +261,9 @@ export function parseBdsMessage(rawText, isSettled = false) {
      const attrs = parseTagAttributes(match[1] || "");
      const deepFetch = Math.max(0, parseInt(attrs.deepFetch, 10) || 0);
      const runId = attrs.runId || attrs.runid || "";
-     result.autoRequests.searchQueries.push({ query, deepFetch, runId });
+     const purpose = String(attrs.purpose || "").trim();
+     const sourceType = String(attrs.sourceType || attrs.sourcetype || "").trim();
+     result.autoRequests.searchQueries.push({ query, deepFetch, runId, purpose, sourceType });
   }
 
   const selfClosingCreateRegex = /<BDS:create_file\s+([^>]*)\/>/gi;
