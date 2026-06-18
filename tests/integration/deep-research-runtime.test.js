@@ -133,4 +133,56 @@ describe("Deep Research runtime events", () => {
     expect(evidenceCall[1]).toContain('<BDS:DEEP_RESEARCH_STEP_DONE runId="run-approve" stepId="1">');
     expect(run.execution.steps[0].status).toBe("awaiting_analysis");
   });
+
+  it("does not mark a managed step as awaiting analysis when sending the evidence prompt fails", async () => {
+    autoMocks.sendFileWithMessage.mockResolvedValue(false);
+    const evidenceFile = new File(["# Search evidence"], "search.md", { type: "text/markdown" });
+    Object.defineProperty(evidenceFile, "text", {
+      value: vi.fn(() => Promise.resolve("# Search evidence")),
+    });
+    readerMocks.searchWeb.mockResolvedValue({
+      query: "gaming laptop reviews",
+      deepFetch: 3,
+      results: [{ title: "Review", url: "https://example.com/review", snippet: "Good evidence" }],
+      provider: "mock",
+      rawResultCount: 1,
+      effectiveQuery: "gaming laptop reviews review",
+      file: evidenceFile,
+    });
+
+    const state = (await import("../../src/content/state.js")).default;
+    const {
+      createRun,
+      initDeepResearchRuntime,
+    } = await import("../../src/content/deep-research.js");
+
+    const plan = {
+      title: "Gaming Laptop Research",
+      steps: [{
+        id: 1,
+        action: "search",
+        query: "gaming laptop reviews",
+        purpose: "collect review evidence",
+        sourceType: "reviews",
+      }],
+    };
+    const run = createRun("conv1", "run-send-fails");
+    run.plan = plan;
+    state.deepResearch.enabled = true;
+    state.deepResearch.runs = [run];
+
+    initDeepResearchRuntime();
+
+    window.dispatchEvent(new CustomEvent("bds:deep-research-approve", {
+      detail: { runId: "run-send-fails", plan },
+    }));
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(autoMocks.sendFileWithMessage).toHaveBeenCalled();
+    expect(run.execution.steps[0].status).toBe("send_failed");
+    expect(run.execution.awaitingAnalysisStepId).toBeNull();
+  });
 });

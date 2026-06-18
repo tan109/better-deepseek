@@ -348,8 +348,7 @@ export function injectPureTextAndSend(autoMessage, logLabel = "Text prompt") {
     return false;
   }
 
-  sendCurrentChatInput(logLabel);
-  return true;
+  return sendCurrentChatInput(logLabel);
 }
 
 async function readFileText(file) {
@@ -537,6 +536,7 @@ function getButtonLabel(button) {
 function isExplicitSendButton(button, label) {
   return (
     button.querySelector('svg path[d*="M8.3125"], .ds-icon-send') ||
+    button.querySelector('svg path[d*="M8.312"]') ||
     button.querySelector('svg path[d*="M13.12 19.98"]') ||
     button.querySelector('svg path[d*="M12 19"]') ||
     button.title === "Send message" ||
@@ -547,6 +547,28 @@ function isExplicitSendButton(button, label) {
     label.includes("\u53d1\u9001") ||
     label === "send" ||
     label === "submit"
+  );
+}
+
+function getSvgPathData(button) {
+  return Array.from(button.querySelectorAll("svg path"))
+    .map((path) => path.getAttribute("d") || "")
+    .join(" ");
+}
+
+function hasSendLikeIcon(button) {
+  const d = getSvgPathData(button);
+  const className = String(button.className || "");
+  return (
+    button.querySelector(".ds-icon-send") ||
+    className.includes("send") ||
+    d.includes("M8.3125") ||
+    d.includes("M8.312") ||
+    d.includes("M13.12 19.98") ||
+    d.includes("M12 19") ||
+    (d.includes("V6") && d.includes("l-5 5") && d.includes("l5 5")) ||
+    (d.includes("M22 2") && d.includes("L11 13")) ||
+    (d.includes("M2.01 21") && d.includes("L23 12"))
   );
 }
 
@@ -600,14 +622,30 @@ function getComposerRootCandidates(editor) {
   return roots;
 }
 
-function findIconOnlySendButtonInRoot(root) {
-  const iconButtons = Array.from(root.querySelectorAll('button, div[role="button"]'))
+function isAfterNode(reference, candidate) {
+  if (!reference || !candidate || reference === candidate) {
+    return true;
+  }
+
+  const following = globalThis.Node?.DOCUMENT_POSITION_FOLLOWING || 4;
+  return Boolean(reference.compareDocumentPosition(candidate) & following);
+}
+
+function getEligibleComposerIconButtons(root, editor) {
+  return Array.from(root.querySelectorAll('button, div[role="button"]'))
     .filter((candidate) =>
+      (!editor || isAfterNode(editor, candidate)) &&
       candidate.querySelector("svg") &&
       !isNonSendComposerControl(candidate, getButtonLabel(candidate)),
     );
+}
 
-  return iconButtons[iconButtons.length - 1] || null;
+function findIconOnlySendButtonInRoot(root, editor, { allowGenericLastIcon = false } = {}) {
+  const iconButtons = getEligibleComposerIconButtons(root, editor);
+  const sendLikeButton = iconButtons.find(hasSendLikeIcon);
+  if (sendLikeButton) return sendLikeButton;
+
+  return allowGenericLastIcon ? iconButtons[iconButtons.length - 1] || null : null;
 }
 
 function findSendButton() {
@@ -620,7 +658,13 @@ function findSendButton() {
   if (explicitSend) return explicitSend;
 
   for (const root of getComposerRootCandidates(editor)) {
-    const candidate = findIconOnlySendButtonInRoot(root);
+    const candidate = findIconOnlySendButtonInRoot(root, editor);
+    if (candidate) return candidate;
+  }
+
+  const roots = getComposerRootCandidates(editor);
+  for (const root of roots.slice().reverse()) {
+    const candidate = findIconOnlySendButtonInRoot(root, editor, { allowGenericLastIcon: true });
     if (candidate) return candidate;
   }
 
@@ -636,45 +680,49 @@ function isSendButtonDisabled(sendBtn) {
 }
 
 function sendCurrentChatInput(logLabel = "Auto message") {
-  let attempts = 0;
-  const startedAt = Date.now();
-  let enterFallbackSent = false;
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const startedAt = Date.now();
+    let enterFallbackSent = false;
 
-  const attemptSend = () => {
-    attempts++;
-    const elapsed = Date.now() - startedAt;
-    const sendBtn = findSendButton();
+    const attemptSend = () => {
+      attempts++;
+      const elapsed = Date.now() - startedAt;
+      const sendBtn = findSendButton();
 
-    if (sendBtn) {
-      if (!isSendButtonDisabled(sendBtn)) {
-        sendBtn.click();
-        console.log(`[BDS:AUTO] ${logLabel} sent successfully after ${attempts} attempts.`);
-        return;
+      if (sendBtn) {
+        if (!isSendButtonDisabled(sendBtn)) {
+          sendBtn.click();
+          console.log(`[BDS:AUTO] ${logLabel} sent successfully after ${attempts} attempts.`);
+          resolve(true);
+          return;
+        }
       }
-    }
 
-    if (!enterFallbackSent && elapsed >= SEND_ENTER_FALLBACK_AFTER_MS) {
-      enterFallbackSent = true;
-      const editor = findChatEditor();
-      if (editor) {
-        editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-        editor.dispatchEvent(new KeyboardEvent("keypress", { key: "Enter", bubbles: true }));
-        editor.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+      if (!enterFallbackSent && elapsed >= SEND_ENTER_FALLBACK_AFTER_MS) {
+        enterFallbackSent = true;
+        const editor = findChatEditor();
+        if (editor) {
+          editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+          editor.dispatchEvent(new KeyboardEvent("keypress", { key: "Enter", bubbles: true }));
+          editor.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+        }
       }
-    }
 
-    if (elapsed < SEND_MAX_WAIT_MS) {
-      setTimeout(attemptSend, SEND_RETRY_DELAY_MS);
-    } else {
-      console.error(`[BDS:AUTO] Failed to send ${logLabel}: button stayed disabled or was not found.`);
-      const editor = findChatEditor();
-      if (editor) {
-        editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      if (elapsed < SEND_MAX_WAIT_MS) {
+        setTimeout(attemptSend, SEND_RETRY_DELAY_MS);
+      } else {
+        console.error(`[BDS:AUTO] Failed to send ${logLabel}: button stayed disabled or was not found.`);
+        const editor = findChatEditor();
+        if (editor) {
+          editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+        }
+        resolve(false);
       }
-    }
-  };
+    };
 
-  setTimeout(attemptSend, SEND_INITIAL_DELAY_MS);
+    setTimeout(attemptSend, SEND_INITIAL_DELAY_MS);
+  });
 }
 
 
@@ -716,8 +764,7 @@ export async function sendFileWithMessage(file, autoMessage = "", logLabel = "Au
     setChatInputText(autoMessage);
   }
 
-  sendCurrentChatInput(logLabel);
-  return true;
+  return sendCurrentChatInput(logLabel);
 }
 
 async function injectFileAndSend(file, autoMessage = "") {

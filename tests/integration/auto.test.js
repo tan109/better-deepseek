@@ -93,11 +93,12 @@ describe("auto integration", () => {
   it("injects pure text and sends it through the chat input", async () => {
     const { injectPureTextAndSend } = await importAutoModule();
 
-    injectPureTextAndSend("Deep Research approval prompt");
+    const sendResult = injectPureTextAndSend("Deep Research approval prompt");
     await vi.advanceTimersByTimeAsync(600);
 
     expect(document.querySelector("#chat-input").value).toBe("Deep Research approval prompt");
     expect(document.querySelector("button").click).toHaveBeenCalledOnce();
+    await expect(sendResult).resolves.toBe(true);
   });
 
   it("keeps retrying file-backed transition sends after attachment readiness is delayed", async () => {
@@ -105,7 +106,7 @@ describe("auto integration", () => {
     sendButton.setAttribute("aria-disabled", "true");
 
     const { sendFileWithMessage } = await importAutoModule();
-    await sendFileWithMessage(
+    const sendResult = sendFileWithMessage(
       new File(["# Evidence"], "evidence.md", { type: "text/markdown" }),
       "<BetterDeepSeek>\n[BDS:DEEP_RESEARCH] Step result\n</BetterDeepSeek>",
       "Deep Research step 2 result",
@@ -118,6 +119,7 @@ describe("auto integration", () => {
     await vi.advanceTimersByTimeAsync(250);
 
     expect(sendButton.click).toHaveBeenCalledOnce();
+    await expect(sendResult).resolves.toBe(true);
   });
 
   it("finds an icon-only composer send button when DeepSeek omits send labels", async () => {
@@ -142,7 +144,7 @@ describe("auto integration", () => {
     });
 
     const { sendFileWithMessage } = await importAutoModule();
-    await sendFileWithMessage(
+    const sendResult = sendFileWithMessage(
       new File(["# Evidence"], "evidence.md", { type: "text/markdown" }),
       "<BetterDeepSeek>\n[BDS:DEEP_RESEARCH] Step result\n</BetterDeepSeek>",
       "Deep Research step 2 result",
@@ -152,6 +154,7 @@ describe("auto integration", () => {
     expect(buttons[0].click).not.toHaveBeenCalled();
     expect(buttons[1].click).not.toHaveBeenCalled();
     expect(buttons[2].click).toHaveBeenCalledOnce();
+    await expect(sendResult).resolves.toBe(true);
   });
 
   it("sends pure text when the icon-only send button is outside the editor wrapper", async () => {
@@ -186,13 +189,14 @@ describe("auto integration", () => {
     });
 
     const { injectPureTextAndSend } = await importAutoModule();
-    injectPureTextAndSend("<BetterDeepSeek>\n[BDS:AUTO] Text transition\n</BetterDeepSeek>");
+    const sendResult = injectPureTextAndSend("<BetterDeepSeek>\n[BDS:AUTO] Text transition\n</BetterDeepSeek>");
     await vi.advanceTimersByTimeAsync(600);
 
     expect(attach.click).not.toHaveBeenCalled();
     expect(search.click).not.toHaveBeenCalled();
     expect(deepResearch.click).not.toHaveBeenCalled();
     expect(send.click).toHaveBeenCalledOnce();
+    await expect(sendResult).resolves.toBe(true);
   });
 
   it("sends file-backed transitions when the native file input and send arrow are in sibling clusters", async () => {
@@ -227,7 +231,7 @@ describe("auto integration", () => {
     });
 
     const { sendFileWithMessage } = await importAutoModule();
-    await sendFileWithMessage(
+    const sendResult = sendFileWithMessage(
       new File(["# Evidence"], "evidence.md", { type: "text/markdown" }),
       "<BetterDeepSeek>\n[BDS:DEEP_RESEARCH] Step result\n</BetterDeepSeek>",
       "Deep Research step result",
@@ -239,6 +243,53 @@ describe("auto integration", () => {
     expect(search.click).not.toHaveBeenCalled();
     expect(deepResearch.click).not.toHaveBeenCalled();
     expect(send.click).toHaveBeenCalledOnce();
+    await expect(sendResult).resolves.toBe(true);
+  });
+
+  it("does not treat an unlabeled editor-shell icon as a successful send", async () => {
+    document.body.innerHTML = `
+      <div id="composer">
+        <div id="editor-shell">
+          <textarea id="chat-input"></textarea>
+          <input type="file" multiple />
+          <button type="button" id="unlabeled-upload"><svg><path d="M1 1h2v2"></path></svg></button>
+        </div>
+        <div id="prompt-actions">
+          <button type="button" class="bds-deep-research-toggle"><svg><path d="M2 2h2v2"></path></svg></button>
+          <button type="button" aria-label="Search"><svg><path d="M3 3h2v2"></path></svg></button>
+        </div>
+        <div id="send-cluster">
+          <button type="button" id="send-arrow"><svg><path d="M20 4L4 12l16 8-4-8 4-8z"></path></svg></button>
+        </div>
+      </div>
+    `;
+    const input = document.querySelector('input[type="file"]');
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      writable: true,
+      value: [],
+    });
+    const upload = document.querySelector("#unlabeled-upload");
+    const search = document.querySelector('[aria-label="Search"]');
+    const deepResearch = document.querySelector(".bds-deep-research-toggle");
+    const send = document.querySelector("#send-arrow");
+    [upload, search, deepResearch, send].forEach((button) => {
+      button.click = vi.fn();
+    });
+
+    const { sendFileWithMessage } = await importAutoModule();
+    const sendResult = sendFileWithMessage(
+      new File(["# Evidence"], "evidence.md", { type: "text/markdown" }),
+      "<BetterDeepSeek>\n[BDS:DEEP_RESEARCH] Step result\n</BetterDeepSeek>",
+      "Deep Research step result",
+    );
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(upload.click).not.toHaveBeenCalled();
+    expect(search.click).not.toHaveBeenCalled();
+    expect(deepResearch.click).not.toHaveBeenCalled();
+    expect(send.click).toHaveBeenCalledOnce();
+    await expect(sendResult).resolves.toBe(true);
   });
 
   it("sets contenteditable chat input text through the shared editor helper", async () => {

@@ -535,8 +535,8 @@ async function runCurrentStep(run) {
     step.resultFile = createStepErrorFile(run, step, step.error);
   }
 
-  step.status = "awaiting_analysis";
-  run.execution.awaitingAnalysisStepId = step.id;
+  step.status = "ready_to_send";
+  run.execution.awaitingAnalysisStepId = null;
   run.updatedAt = Date.now();
   emitRunState(run);
   void persistRuns(state.deepResearch.runs);
@@ -649,7 +649,37 @@ async function sendStepResult(run, step) {
     return await sendFileWithMessage(step.resultFile, prompt, label);
   }
 
-  return injectPureTextAndSend(prompt, label);
+  return await Promise.resolve(injectPureTextAndSend(prompt, label));
+}
+
+function markStepAwaitingAnalysis(run, step) {
+  step.status = "awaiting_analysis";
+  run.execution.awaitingAnalysisStepId = step.id;
+  run.updatedAt = Date.now();
+  emitRunState(run);
+  void persistRuns(state.deepResearch.runs);
+}
+
+function markStepSendFailed(run, step) {
+  step.status = "send_failed";
+  if (!step.error) {
+    step.error = "Could not send the Deep Research step result into the chat.";
+  }
+  run.execution.awaitingAnalysisStepId = null;
+  run.updatedAt = Date.now();
+  emitRunState(run);
+  void persistRuns(state.deepResearch.runs);
+}
+
+async function sendStepForAnalysis(run, step) {
+  const sent = await sendStepResult(run, step);
+  if (sent === false) {
+    markStepSendFailed(run, step);
+    return false;
+  }
+
+  markStepAwaitingAnalysis(run, step);
+  return true;
 }
 
 /**
@@ -692,7 +722,7 @@ function advanceToNextStep(run) {
   run.execution.currentStepIndex += 1;
 
   if (run.execution.currentStepIndex >= run.execution.steps.length) {
-    requestFinalReport(run);
+    void requestFinalReport(run);
     return false;
   }
 
@@ -701,21 +731,31 @@ function advanceToNextStep(run) {
   void runCurrentStep(run).then((ran) => {
     if (ran) {
       const step = run.execution.steps[run.execution.currentStepIndex];
-      void sendStepResult(run, step);
+      void sendStepForAnalysis(run, step);
     }
   });
   return true;
 }
 
-function requestFinalReport(run) {
+async function requestFinalReport(run) {
   run.execution.awaitingAnalysisStepId = null;
+  emitRunState(run);
+
+  const sent = await Promise.resolve(
+    injectPureTextAndSend(buildFinalReportPrompt(run), "Deep Research final report request"),
+  );
+  if (sent === false) {
+    state.ui?.showToast?.("Could not request the Deep Research final report.");
+    emitRunState(run);
+    return false;
+  }
+
   run.execution.reportRequested = true;
   setStatus(run, "reporting");
   upsertRun(run);
   emitRunState(run);
   void persistRuns(state.deepResearch.runs);
-
-  injectPureTextAndSend(buildFinalReportPrompt(run), "Deep Research final report request");
+  return true;
 }
 
 /**
@@ -915,7 +955,7 @@ export function initDeepResearchRuntime() {
     void persistRuns(state.deepResearch.runs);
 
     if (run.execution.steps.length === 0) {
-      requestFinalReport(run);
+      void requestFinalReport(run);
       return;
     }
 
@@ -923,10 +963,9 @@ export function initDeepResearchRuntime() {
     void runCurrentStep(run).then((ran) => {
       if (ran) {
         const step = run.execution.steps[0];
-        void sendStepResult(run, step).then((sent) => {
+        void sendStepForAnalysis(run, step).then((sent) => {
           if (sent === false) {
             state.ui?.showToast?.("Could not start Deep Research execution.");
-            emitRunState(run);
           }
         });
       }

@@ -350,7 +350,7 @@ describe("Deep Research state machine", () => {
       expect(isManagedRunActive("run-unknown")).toBe(false);
     });
 
-    it("handleStepDone only advances when runId and stepId match", () => {
+    it("handleStepDone only advances when runId and stepId match", async () => {
       state.deepResearch.runs = [];
       state.deepResearch.enabled = true;
 
@@ -376,6 +376,7 @@ describe("Deep Research state machine", () => {
       // Outcome should include analysis
       const outcome = JSON.parse(run.execution.steps[0].outcome);
       expect(outcome.analysis).toBe("found info");
+      await Promise.resolve();
       expect(run.execution.reportRequested).toBe(true);
     });
 
