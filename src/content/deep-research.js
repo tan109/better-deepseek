@@ -195,8 +195,26 @@ function normalizeSourceType(raw) {
   return VALID_SOURCE_TYPES.includes(normalized) ? normalized : "general";
 }
 
-function isHttpUrl(str) {
-  return /^https?:\/\/.+/i.test(String(str || "").trim());
+function tryNormalizeFetchUrl(value) {
+  try {
+    return normalizeHttpUrl(value);
+  } catch {
+    return "";
+  }
+}
+
+function normalizeSearchDedupeQuery(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function getStepDedupeKey(step) {
+  const action = String(step?.action || "").trim().toLowerCase();
+  if (!VALID_ADAPTIVE_ACTIONS.includes(action)) return "";
+
+  const query = action === "fetch"
+    ? tryNormalizeFetchUrl(step?.query) || normalizeSearchDedupeQuery(step?.query)
+    : normalizeSearchDedupeQuery(step?.query);
+  return query ? `${action}\n${query}` : "";
 }
 
 /**
@@ -216,16 +234,14 @@ function validateAdaptiveStep(rawStep, existingSteps, adapterCounter) {
   const query = String(rawStep.query || "").trim();
   if (!query) return null;
 
-  // Fetch steps must target HTTP(S) URLs
-  if (action === "fetch" && !isHttpUrl(query)) return null;
+  // Fetch steps must target normalizable HTTP(S) URLs
+  const normalizedQuery = action === "fetch" ? tryNormalizeFetchUrl(query) : query;
+  if (!normalizedQuery) return null;
 
   // Deduplicate against all existing steps by normalized action + query
-  const normalizedQuery = action === "fetch" ? normalizeHttpUrl(query) : query;
+  const candidateKey = getStepDedupeKey({ action, query: normalizedQuery });
   for (const existing of existingSteps) {
-    const existingQuery = existing.action === "fetch" && existing.query
-      ? normalizeHttpUrl(existing.query)
-      : existing.query;
-    if (existing.action === action && existingQuery === normalizedQuery) {
+    if (getStepDedupeKey(existing) === candidateKey) {
       return null;
     }
   }
@@ -557,6 +573,7 @@ function initManagedExecution(run) {
   run.execution.currentStepIndex = 0;
   run.execution.awaitingAnalysisStepId = null;
   run.execution.reportRequested = false;
+  run.execution.adaptiveStepCounter = 0;
 }
 
 /**
@@ -1039,7 +1056,7 @@ function processAdaptiveSteps(run, nextSteps, parentStepId) {
 
   for (const rawStep of nextSteps) {
     if (accepted.length >= allowedCount) break;
-    const valid = validateAdaptiveStep(rawStep, exec.steps, exec.adaptiveStepCounter);
+    const valid = validateAdaptiveStep(rawStep, exec.steps.concat(accepted), exec.adaptiveStepCounter);
     if (valid) {
       valid.parentStepId = parentStepId;
       exec.adaptiveStepCounter++;
@@ -1062,6 +1079,8 @@ function processAdaptiveSteps(run, nextSteps, parentStepId) {
       purpose: s.purpose,
       sourceType: s.sourceType,
       deepFetch: s.deepFetch,
+      adaptive: true,
+      parentStepId: s.parentStepId || null,
     })));
   }
 

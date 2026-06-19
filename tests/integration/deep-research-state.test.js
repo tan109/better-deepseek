@@ -583,6 +583,36 @@ describe("Deep Research state machine", () => {
       expect(run.execution.adaptiveStepCounter).toBe(0);
     });
 
+    it("deduplicates adaptive steps proposed in the same nextSteps payload", async () => {
+      state.deepResearch.runs = [];
+      state.deepResearch.enabled = true;
+
+      const run = createRun("conv1", "run-adaptive-same-payload-dup");
+      run.execution.managed = true;
+      run.execution.steps = [
+        { id: "1", action: "search", query: "initial query", purpose: "overview", sourceType: "general", status: "awaiting_analysis", outcome: null, error: null },
+      ];
+      run.execution.currentStepIndex = 0;
+      run.execution.awaitingAnalysisStepId = "1";
+      run.execution.reportRequested = false;
+      run.execution.adaptiveStepCounter = 0;
+      state.deepResearch.runs.push(run);
+
+      const result = handleStepDone(run, "1", {
+        analysis: "found a gap",
+        newInsights: [],
+        nextSteps: [
+          { action: "search", query: "Duplicate Follow Up", purpose: "gap A", sourceType: "academic" },
+          { action: "search", query: " duplicate   follow up ", purpose: "same gap", sourceType: "academic" },
+        ],
+      });
+
+      expect(result).toBe(true);
+      expect(run.execution.steps).toHaveLength(2);
+      expect(run.execution.steps[1].query).toBe("Duplicate Follow Up");
+      expect(run.execution.adaptiveStepCounter).toBe(1);
+    });
+
     it("ignores adaptive steps with invalid URL for fetch action", async () => {
       state.deepResearch.runs = [];
       state.deepResearch.enabled = true;
@@ -608,6 +638,34 @@ describe("Deep Research state machine", () => {
 
       // Invalid URL fetch should be rejected
       expect(run.execution.steps).toHaveLength(1);
+    });
+
+    it("ignores malformed HTTP-looking adaptive fetch URLs without throwing", async () => {
+      state.deepResearch.runs = [];
+      state.deepResearch.enabled = true;
+
+      const run = createRun("conv1", "run-adaptive-malformed-fetch");
+      run.execution.managed = true;
+      run.execution.steps = [
+        { id: "1", action: "search", query: "test", purpose: "test", sourceType: "general", status: "awaiting_analysis", outcome: null, error: null },
+      ];
+      run.execution.currentStepIndex = 0;
+      run.execution.awaitingAnalysisStepId = "1";
+      run.execution.reportRequested = false;
+      run.execution.adaptiveStepCounter = 0;
+      state.deepResearch.runs.push(run);
+
+      const result = handleStepDone(run, "1", {
+        analysis: "found something",
+        newInsights: [],
+        nextSteps: [
+          { action: "fetch", query: "https://", purpose: "malformed" },
+        ],
+      });
+
+      expect(result).toBe(true);
+      expect(run.execution.steps).toHaveLength(1);
+      expect(run.execution.adaptiveStepCounter).toBe(0);
     });
 
     it("ignores adaptive steps with empty query", async () => {
