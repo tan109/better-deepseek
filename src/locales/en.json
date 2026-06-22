@@ -376,12 +376,16 @@
       "pythonRunner": "Python Runner",
       "tsRunner": "TypeScript Runner",
       "jsRunner": "JavaScript Runner",
+      "luaRunner": "Lua Runner",
+      "rubyRunner": "Ruby Runner",
       "download": "Download",
       "placeholder": "Enter your code here...",
       "running": "Running...",
       "runPython": "▶ Run Python",
       "runTs": "▶ Run TS",
       "runJs": "▶ Run JS",
+      "runLua": "▶ Run Lua",
+      "runRuby": "▶ Run Ruby",
       "consoleOutput": "Console Output",
       "clear": "Clear",
       "noOutput": "(Execution finished with no output)",
@@ -390,7 +394,9 @@
       "executionError": "Execution Error.",
       "pythonStatus": "Python 3.x (WASM)",
       "tsStatus": "TypeScript (Babel)",
-      "jsStatus": "JavaScript (V8)"
+      "jsStatus": "JavaScript (V8)",
+      "luaStatus": "Lua (Fengari)",
+      "rubyStatus": "Ruby (Opal)"
     },
     "autoCodeResult": {
       "success": "Execution Successful",

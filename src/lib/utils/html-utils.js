@@ -626,6 +626,8 @@ canvas {
 export function buildHeadlessRunnerDocument(language = "javascript") {
   const isPython = language === "python" || language === "py";
   const isTypeScript = language === "typescript" || language === "ts";
+  const isLua = language === "lua";
+  const isRuby = language === "ruby";
 
   return `<!DOCTYPE html>
 <html>
@@ -633,6 +635,8 @@ export function buildHeadlessRunnerDocument(language = "javascript") {
     <meta charset="UTF-8" />
     ${isPython ? '<script src="https://cdn.jsdelivr.net/pyodide/v0.27.3/full/pyodide.js"><\/script>' : ''}
     ${isTypeScript ? '<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.0/babel.min.js"></script>' : ''}
+    ${isLua ? '<script src="https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js"><\/script>' : ''}
+    ${isRuby ? '<script src="https://cdn.opalrb.com/opal/1.8.2/opal.min.js"></script><script src="https://cdn.opalrb.com/opal/1.8.2/opal-parser.min.js"></script>' : ''}
   </head>
   <body>
     <script>
@@ -694,6 +698,34 @@ export function buildHeadlessRunnerDocument(language = "javascript") {
             if (result !== undefined && result !== null) {
               console.log(String(result).trim());
             }
+          } else if ("${isLua}" === "true") {
+            if (!window.fengari) {
+              let checks = 0;
+              while (!window.fengari && checks < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                checks++;
+              }
+            }
+            if (!window.fengari) throw new Error("Fengari (Lua runtime) failed to load");
+            const { lua, lauxlib, lualib } = window.fengari;
+            const L = lauxlib.luaL_newstate();
+            lualib.luaL_openlibs(L);
+            const result = lauxlib.luaL_dostring(L, window.fengari.to_luastring(code));
+            if (result !== 0) {
+              const msg = lua.lua_tojsstring(L, -1);
+              lua.lua_pop(L, 1);
+              throw new Error(msg || "Lua execution error");
+            }
+          } else if ("${isRuby}" === "true") {
+            if (!window.Opal?.eval) {
+              let checks = 0;
+              while (!window.Opal?.eval && checks < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                checks++;
+              }
+            }
+            if (!window.Opal?.eval) throw new Error("Opal (Ruby runtime) failed to load");
+            Opal.eval(code);
           } else {
             let finalCode = code;
             if ("${isTypeScript}" === "true") {

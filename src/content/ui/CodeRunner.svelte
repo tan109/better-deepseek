@@ -15,6 +15,8 @@
   
   let isPython = $derived(language === "python" || language === "py");
   let isTypeScript = $derived(language === "typescript" || language === "ts");
+  let isLua = $derived(language === "lua");
+  let isRuby = $derived(language === "ruby");
   
   let headlessSrcDoc = $derived(buildHeadlessRunnerDocument(language));
 
@@ -44,7 +46,7 @@
   }
 
   function handleDownload() {
-    const ext = isPython ? "py" : (isTypeScript ? "ts" : "js");
+    const ext = isPython ? "py" : isTypeScript ? "ts" : isLua ? "lua" : isRuby ? "rb" : "js";
     triggerTextDownload(code, `script-${Date.now()}.${ext}`);
   }
 
@@ -54,7 +56,7 @@
       case "RUNNING": return t('codeRunner.running');
       case "FINISHED": return t('codeRunner.finished');
       case "ERROR": return t('codeRunner.executionError');
-      default: return isPython ? t('codeRunner.pythonStatus') : (isTypeScript ? t('codeRunner.tsStatus') : t('codeRunner.jsStatus'));
+      default: return isPython ? t('codeRunner.pythonStatus') : isTypeScript ? t('codeRunner.tsStatus') : isLua ? t('codeRunner.luaStatus') : isRuby ? t('codeRunner.rubyStatus') : t('codeRunner.jsStatus');
     }
   }
 </script>
@@ -62,11 +64,19 @@
 <article class="bds-code-runner-card">
   <header class="bds-runner-header">
     <div class="bds-runner-title">
-      <div class="bds-runner-icon" class:python={isPython} class:js={!isPython}>
+      <div class="bds-runner-icon" class:python={isPython} class:lua={isLua} class:ruby={isRuby} class:js={!isPython && !isLua && !isRuby}>
         {#if isPython}
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+        {:else if isLua}
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+          </svg>
+        {:else if isRuby}
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 18L6 12l10-6v12z"></path>
           </svg>
         {:else}
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -75,7 +85,7 @@
         {/if}
       </div>
       <div class="bds-title-group">
-        <h4>{isPython ? t('codeRunner.pythonRunner') : (isTypeScript ? t('codeRunner.tsRunner') : t('codeRunner.jsRunner'))}</h4>
+        <h4>{isPython ? t('codeRunner.pythonRunner') : isTypeScript ? t('codeRunner.tsRunner') : isLua ? t('codeRunner.luaRunner') : isRuby ? t('codeRunner.rubyRunner') : t('codeRunner.jsRunner')}</h4>
         <span class="bds-status-text">{getStatusText()}</span>
       </div>
     </div>
@@ -106,7 +116,7 @@
         {#if status === 'RUNNING'}
           <span class="bds-spinner"></span> {t('codeRunner.running')}
         {:else}
-          ▶ {isPython ? t('codeRunner.runPython') : (isTypeScript ? t('codeRunner.runTs') : t('codeRunner.runJs'))}
+          ▶ {isPython ? t('codeRunner.runPython') : isTypeScript ? t('codeRunner.runTs') : isLua ? t('codeRunner.runLua') : isRuby ? t('codeRunner.runRuby') : t('codeRunner.runJs')}
         {/if}
       </button>
     </div>

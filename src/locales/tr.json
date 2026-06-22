@@ -365,12 +365,16 @@
       "pythonRunner": "Python Çalıştırıcı",
       "tsRunner": "TypeScript Çalıştırıcı",
       "jsRunner": "JavaScript Çalıştırıcı",
+      "luaRunner": "Lua Çalıştırıcı",
+      "rubyRunner": "Ruby Çalıştırıcı",
       "download": "İndir",
       "placeholder": "Kodunuzu buraya yazın...",
       "running": "Çalıştırılıyor...",
       "runPython": "▶ Python Çalıştır",
       "runTs": "▶ TS Çalıştır",
       "runJs": "▶ JS Çalıştır",
+      "runLua": "▶ Lua Çalıştır",
+      "runRuby": "▶ Ruby Çalıştır",
       "consoleOutput": "Konsol Çıktısı",
       "clear": "Temizle",
       "noOutput": "(Kod çıktı vermeden başarıyla tamamlandı)",
@@ -379,7 +383,9 @@
       "executionError": "Çalıştırma Hatası.",
       "pythonStatus": "Python 3.x (WASM)",
       "tsStatus": "TypeScript (Babel)",
-      "jsStatus": "JavaScript (V8)"
+      "jsStatus": "JavaScript (V8)",
+      "luaStatus": "Lua (Fengari)",
+      "rubyStatus": "Ruby (Opal)"
     },
     "autoCodeResult": {
       "success": "Çalıştırma Başarılı",

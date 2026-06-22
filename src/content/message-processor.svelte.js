@@ -13,6 +13,8 @@ import {
 import { extractMessageRawText } from "./dom/message-text.js";
 import { injectPythonRunButtons } from "./dom/python-injector.js";
 import { injectJavaScriptRunButtons } from "./dom/javascript-injector.js";
+import { injectLuaRunButtons } from "./dom/lua-injector.js";
+import { injectRubyRunButtons } from "./dom/ruby-injector.js";
 import { parseBdsMessage } from "./parser/index.js";
 import { upsertMemories } from "./parser/memory-parser.js";
 import { upsertCharacters } from "./parser/character-parser.js";
@@ -66,9 +68,11 @@ export function processMessageNode(node) {
     return;
   }
 
-  // Inject Run buttons into any Python/JS code blocks in this message
+  // Inject Run buttons into any Python/JS/Lua/Ruby code blocks in this message
   injectPythonRunButtons(node);
   injectJavaScriptRunButtons(node);
+  injectLuaRunButtons(node);
+  injectRubyRunButtons(node);
   injectSelectionCheckbox(node);
   injectBookmarkButton(node);
 

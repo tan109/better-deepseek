@@ -48,3 +48,29 @@ describe("normalizeTaggedCodeContent for auto:code_runner", () => {
     expect(normalizeTaggedCodeContent(raw, "auto:code_runner")).toBe("alert(1)");
   });
 });
+
+describe("BDS:AUTO:CODE_RUNNER Lua support", () => {
+  it("parses auto:code_runner with lua language", () => {
+    const text = '<BDS:AUTO:CODE_RUNNER language="lua">print("hello")</BDS:AUTO:CODE_RUNNER>';
+    const result = parseBdsMessage(text);
+    expect(result.renderableBlocks).toHaveLength(1);
+    expect(result.renderableBlocks[0].attrs.language).toBe("lua");
+    expect(result.renderableBlocks[0].content).toBe('print("hello")');
+  });
+
+  it("parses auto:code_runner with ruby language", () => {
+    const text = '<BDS:AUTO:CODE_RUNNER language="ruby">puts "hello"</BDS:AUTO:CODE_RUNNER>';
+    const result = parseBdsMessage(text);
+    expect(result.renderableBlocks).toHaveLength(1);
+    expect(result.renderableBlocks[0].attrs.language).toBe("ruby");
+    expect(result.renderableBlocks[0].content).toBe('puts "hello"');
+  });
+
+  it("identifies new languages as hiding tags", () => {
+    const luaText = '<BDS:AUTO:CODE_RUNNER language="lua">print(1)</BDS:AUTO:CODE_RUNNER>';
+    expect(parseBdsMessage(luaText).containsControlTags).toBe(true);
+
+    const rubyText = '<BDS:AUTO:CODE_RUNNER language="ruby">puts 1</BDS:AUTO:CODE_RUNNER>';
+    expect(parseBdsMessage(rubyText).containsControlTags).toBe(true);
+  });
+});

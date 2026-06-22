@@ -365,12 +365,16 @@
       "pythonRunner": "Python 运行器",
       "tsRunner": "TypeScript 运行器",
       "jsRunner": "JavaScript 运行器",
+      "luaRunner": "Lua 运行器",
+      "rubyRunner": "Ruby 运行器",
       "download": "下载",
       "placeholder": "在此输入代码…",
       "running": "运行中…",
       "runPython": "▶ 运行 Python",
       "runTs": "▶ 运行 TS",
       "runJs": "▶ 运行 JS",
+      "runLua": "▶ 运行 Lua",
+      "runRuby": "▶ 运行 Ruby",
       "consoleOutput": "控制台输出",
       "clear": "清空",
       "noOutput": "（执行完成，无输出）",
@@ -379,7 +383,9 @@
       "executionError": "执行出错。",
       "pythonStatus": "Python 3.x（WASM）",
       "tsStatus": "TypeScript（Babel）",
-      "jsStatus": "JavaScript（V8）"
+      "jsStatus": "JavaScript（V8）",
+      "luaStatus": "Lua（Fengari）",
+      "rubyStatus": "Ruby（Opal）"
     },
     "autoCodeResult": {
       "success": "执行成功",

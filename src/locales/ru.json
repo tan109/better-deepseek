@@ -365,12 +365,16 @@
       "pythonRunner": "Запуск Python",
       "tsRunner": "Запуск TypeScript",
       "jsRunner": "Запуск JavaScript",
+      "luaRunner": "Запуск Lua",
+      "rubyRunner": "Запуск Ruby",
       "download": "Скачать",
       "placeholder": "Введите ваш код здесь...",
       "running": "Выполнение...",
       "runPython": "▶ Запустить Python",
       "runTs": "▶ Запустить TS",
       "runJs": "▶ Запустить JS",
+      "runLua": "▶ Запустить Lua",
+      "runRuby": "▶ Запустить Ruby",
       "consoleOutput": "Вывод консоли",
       "clear": "Очистить",
       "noOutput": "(Выполнение завершено без вывода)",
@@ -379,7 +383,9 @@
       "executionError": "Ошибка выполнения.",
       "pythonStatus": "Python 3.x (WASM)",
       "tsStatus": "TypeScript (Babel)",
-      "jsStatus": "JavaScript (V8)"
+      "jsStatus": "JavaScript (V8)",
+      "luaStatus": "Lua (Fengari)",
+      "rubyStatus": "Ruby (Opal)"
     },
     "autoCodeResult": {
       "success": "Выполнение успешно",

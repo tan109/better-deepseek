@@ -17,8 +17,10 @@
 
   let isPython = $derived(language === "python" || language === "py");
   let isTypeScript = $derived(language === "typescript" || language === "ts");
-  let langLabel = $derived(isPython ? "Python" : (isTypeScript ? "TypeScript" : "JavaScript"));
-  let langColor = $derived(isPython ? "#10b981" : (isTypeScript ? "#3b82f6" : "#f59e0b"));
+  let isLua = $derived(language === "lua");
+  let isRuby = $derived(language === "ruby");
+  let langLabel = $derived(isPython ? "Python" : isTypeScript ? "TypeScript" : isLua ? "Lua" : isRuby ? "Ruby" : "JavaScript");
+  let langColor = $derived(isPython ? "#10b981" : isTypeScript ? "#3b82f6" : isLua ? "#a855f7" : isRuby ? "#dc2626" : "#f59e0b");
 
   function handleMessage(event) {
     const { type, data, id } = event.data;
@@ -72,6 +74,14 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+        {:else if isLua}
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+          </svg>
+        {:else if isRuby}
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 18L6 12l10-6v12z"></path>
           </svg>
         {:else}
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
