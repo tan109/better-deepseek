@@ -1177,4 +1177,34 @@ describe("parseBdsMessage — multiple diverse tag types", () => {
     expect(result.createFiles[1].fileName).toBe("inner.py");
     expect(result.createFiles[2].fileName).toBe("post.py");
   });
+
+  describe("ask_question — backslash escaping repair", () => {
+    it("parses ask_question with Windows path containing backslash", () => {
+      const raw = '<BDS:ask_question>[{"id":"q1","question":"Is path F:\\\\better-deepseek?","type":"input"}]</BDS:ask_question>';
+      const result = parseBdsMessage(raw);
+      expect(result.askQuestions).toHaveLength(1);
+      expect(result.askQuestions[0].question).toBe("Is path F:\\better-deepseek?");
+    });
+
+    it("repairs ask_question JSON with unescaped backslash before b", () => {
+      const raw = '<BDS:ask_question>[{"id":"q1","question":"F:\\better-deepseek?","type":"input"}]</BDS:ask_question>';
+      const result = parseBdsMessage(raw);
+      expect(result.askQuestions).toHaveLength(1);
+      expect(result.askQuestions[0].question).toBe("F:\\better-deepseek?");
+    });
+
+    it("repairs ask_question JSON with invalid escape sequences", () => {
+      const raw = '<BDS:ask_question>[{"id":"q1","question":"C:\\program files\\test","type":"input"}]</BDS:ask_question>';
+      const result = parseBdsMessage(raw);
+      expect(result.askQuestions).toHaveLength(1);
+      expect(result.askQuestions[0].question).toBe("C:\\program files\\test");
+    });
+
+    it("renders ask_question as a renderable block when JSON is repairable", () => {
+      const raw = '<BDS:ask_question>[{"id":"q1","question":"F:\\better?","type":"input"}]</BDS:ask_question>';
+      const result = parseBdsMessage(raw);
+      expect(result.renderableBlocks).toHaveLength(1);
+      expect(result.renderableBlocks[0].name).toBe("ask_question");
+    });
+  });
 });

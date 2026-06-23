@@ -16,6 +16,39 @@ describe("parseTagAttributes", () => {
   it("ignores malformed attributes", () => {
     expect(parseTagAttributes("bad=demo")).toEqual({});
   });
+
+  it("handles escaped quotes (\\\") in attribute values", () => {
+    const input = 'fileName="test.js" content="he said \\"hi\\""';
+    expect(parseTagAttributes(input)).toEqual({
+      fileName: "test.js",
+      content: 'he said "hi"',
+    });
+  });
+
+  it("handles mixed content with normal and escaped quotes", () => {
+    const input = 'name="demo" code="console.log(\\"hello\\", world)"';
+    expect(parseTagAttributes(input)).toEqual({
+      name: "demo",
+      code: 'console.log("hello", world)',
+    });
+  });
+
+  it("preserves unescaped backslashes as-is (not treated as escape)", () => {
+    const input = 'fileName="test.py" content="path = C:\\path"';
+    expect(parseTagAttributes(input)).toEqual({
+      fileName: "test.py",
+      content: "path = C:\\path",
+    });
+  });
+
+  it("handles multiple attributes with escaped quotes", () => {
+    const input = 'a="x" b="say \\"yes\\"" c="z"';
+    expect(parseTagAttributes(input)).toEqual({
+      a: "x",
+      b: 'say "yes"',
+      c: "z",
+    });
+  });
 });
 
 describe("unwrapMarkdownCodeFence", () => {

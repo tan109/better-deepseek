@@ -70,12 +70,8 @@
   }
 
   function parseQuestions(content) {
-    try {
-      const parsed = JSON.parse(content);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+    const parsed = parseLooseJson(content);
+    return Array.isArray(parsed.value) ? parsed.value : [];
   }
 
   function typeLabel(type) {

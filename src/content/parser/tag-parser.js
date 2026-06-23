@@ -1,21 +1,46 @@
 /**
  * Parse tag attributes from a string like: fileName="test.py" content="..."
+ * Handles escaped quotes (\" ) inside attribute values.
+ * Only \" is treated as an escape — other \X sequences (e.g. \p, \t)
+ * are preserved as-is to avoid corrupting paths.
  */
 export function parseTagAttributes(rawAttrs) {
   const attrs = {};
-  const regex = /([A-Za-z0-9_:-]+)\s*=\s*"([\s\S]*?)"/g;
+  const keyRegex = /([A-Za-z0-9_:-]+)\s*=\s*/g;
 
   let match;
-  while ((match = regex.exec(rawAttrs)) !== null) {
+  while ((match = keyRegex.exec(rawAttrs)) !== null) {
     const key = String(match[1] || "").trim();
-    if (!key) {
-      continue;
+    if (!key) continue;
+
+    const start = keyRegex.lastIndex;
+    if (start >= rawAttrs.length || rawAttrs[start] !== '"') continue;
+
+    // Walk character-by-character to find the closing quote,
+    // respecting escaped quotes: \" only
+    let value = "";
+    let i = start + 1;
+    while (i < rawAttrs.length) {
+      const ch = rawAttrs[i];
+      if (ch === "\\" && rawAttrs[i + 1] === '"') {
+        value += '"';
+        i += 2;
+        continue;
+      }
+      if (ch === '"') {
+        i++;
+        break;
+      }
+      value += ch;
+      i++;
     }
 
+    keyRegex.lastIndex = i;
+
     if (key === "fileName") {
-      attrs.fileName = String(match[2] || "");
+      attrs.fileName = value;
     } else {
-      attrs[key] = String(match[2] || "");
+      attrs[key] = value;
     }
   }
 

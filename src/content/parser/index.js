@@ -184,13 +184,12 @@ export function parseBdsMessage(rawText, isSettled = false) {
     }
 
     if (name === "ask_question") {
-      try {
-        const questions = JSON.parse(content);
-        if (Array.isArray(questions)) {
-          result.askQuestions = questions;
-        }
-      } catch (e) {
-        console.error("Failed to parse ask_question JSON:", e);
+      const parsed = parseLooseJson(content);
+      if (Array.isArray(parsed.value)) {
+        result.askQuestions = parsed.value;
+      }
+      if (parsed.error) {
+        console.error("Failed to parse ask_question JSON:", parsed.error);
       }
     }
 
