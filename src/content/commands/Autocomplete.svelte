@@ -68,19 +68,18 @@
     const text = editorValue(e.target)
     const pos = getCursorPosition(e.target)
     const beforeCursor = text.slice(0, pos)
-    const slashIdx = beforeCursor.lastIndexOf("/")
-    console.log("[BDS:Cmd] input text=" + text.substring(0, 50).replace(/\n/g, "\\n"), "pos=" + pos, "slashAt=" + slashIdx, "open=" + isOpen)
-    if (slashIdx >= 0) {
-      const afterSlash = beforeCursor.slice(slashIdx + 1)
+    console.log("[BDS:Cmd] input text=" + text.substring(0, 50).replace(/\n/g, "\\n"), "pos=" + pos, "open=" + isOpen)
+    if (beforeCursor.startsWith("/")) {
+      const afterSlash = beforeCursor.slice(1)
       if (!afterSlash.includes(" ")) {
-        lastSlashPos = slashIdx; query = afterSlash; selectedIndex = 0
+        lastSlashPos = 0; query = afterSlash; selectedIndex = 0
         updateFiltered(); updatePosition(e.target)
         isOpen = filteredItems.length > 0
         console.log("[BDS:Cmd] dropdown " + (isOpen ? "OPEN" : "CLOSED (no matches)") + " query=" + query + " items=" + filteredItems.length)
         return
       }
     }
-    if (isOpen) { isOpen = false; console.log("[BDS:Cmd] dropdown CLOSED (no slash or space after slash)") }
+    if (isOpen) { isOpen = false; console.log("[BDS:Cmd] dropdown CLOSED (no slash at start or space after slash)") }
   }
 
   function handleKeydown(e) {
