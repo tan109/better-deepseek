@@ -1,7 +1,7 @@
 import { injectPureTextAndSend, findChatEditor } from "../auto.js"
 import { extractMessageMarkdown } from "../dom/message-text.js"
 import { isSystemGenerating } from "../message-processor.svelte.js"
-import { remoteConfig } from "../../lib/remote-config.svelte.js"
+import { remoteConfig, detectModelType } from "../../lib/remote-config.svelte.js"
 import state from "../state.js"
 
 const PROMPT_A = `You are about to lose access to this entire conversation history. Before that happens, produce a complete, self-contained HANDOFF DOCUMENT that will let a new instance of you (with zero memory of this conversation) pick up exactly where we left off, with no loss of context, no re-litigating settled decisions, and no repeating mistakes already ruled out.
@@ -115,9 +115,8 @@ export async function performCompress() {
     console.log("[BDS:Handoff] performCompress - waiting for generation end")
     const handoff = await waitForGenerationEnd()
     console.log("[BDS:Handoff] performCompress - handoff received, length:", handoff.length)
-    const modelEl = document.querySelector('div[role="radio"][aria-checked="true"]')
-    const modelType = modelEl?.getAttribute("data-model-type") || "default"
-    console.log("[BDS:Handoff] performCompress - modelType:", modelType)
+    const modelType = detectModelType()
+    console.log("[BDS:Handoff] performCompress - modelType detected:", modelType)
     sessionStorage.setItem("bds:pending-handoff", JSON.stringify({ handoff, modelType }))
     console.log("[BDS:Handoff] performCompress - navigating to /")
     window.location.href = "https://chat.deepseek.com/"
@@ -125,6 +124,34 @@ export async function performCompress() {
     console.log("[BDS:Handoff] performCompress - error:", err.message)
     if (state.ui) state.ui.showToast(`Handoff failed: ${err.message}`)
   }
+}
+
+export function setDeepSeekModel(modelName) {
+  console.log(`[BDS:Handoff] setDeepSeekModel("${modelName}") called`)
+  const radiogroup = document.querySelector('[role="radiogroup"]')
+  console.log("[BDS:Handoff] setDeepSeekModel - radiogroup found:", !!radiogroup)
+  if (!radiogroup) { console.error('[BDS:Handoff] setDeepSeekModel - radiogroup not found'); return false }
+  const buttons = radiogroup.querySelectorAll('[role="radio"]')
+  console.log("[BDS:Handoff] setDeepSeekModel - buttons in radiogroup:", buttons.length)
+  buttons.forEach((b, i) => {
+    console.log(`[BDS:Handoff] setDeepSeekModel - btn #${i}: checked="${b.getAttribute('aria-checked')}" data-model-type="${b.getAttribute('data-model-type')}" text="${(b.textContent || '').trim().substring(0, 40)}"`)
+  })
+  const targetBtn = Array.from(buttons).find(btn => {
+    const textMatch = btn.textContent.toLowerCase().includes(modelName.toLowerCase())
+    const dataMatch = btn.getAttribute('data-model-type') === modelName.toLowerCase()
+    console.log(`[BDS:Handoff] setDeepSeekModel - match check: text="${(btn.textContent || '').trim().substring(0, 30)}" textMatch=${textMatch} dataMatch=${dataMatch}`)
+    return textMatch || dataMatch
+  })
+  console.log("[BDS:Handoff] setDeepSeekModel - targetBtn found:", !!targetBtn)
+  if (!targetBtn) { console.error(`[BDS:Handoff] setDeepSeekModel - model "${modelName}" not found among buttons`); return false }
+  console.log("[BDS:Handoff] setDeepSeekModel - targetBtn checked:", targetBtn.getAttribute('aria-checked'))
+  if (targetBtn.getAttribute('aria-checked') === 'true') { console.log(`[BDS:Handoff] setDeepSeekModel - already "${modelName}", skipping`); return true }
+  console.log("[BDS:Handoff] setDeepSeekModel - dispatching mousedown/mouseup/click")
+  targetBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+  targetBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }))
+  targetBtn.click()
+  console.log(`[BDS:Handoff] setDeepSeekModel - click dispatched for "${modelName}"`)
+  return true
 }
 
 export function checkPendingHandoff() {
@@ -150,24 +177,17 @@ export function checkPendingHandoff() {
   const full = `${PROMPT_B_PREAMBLE}\n\n${handoff}\n\n${PROMPT_B_POSTAMBLE}`
 
   ;(async () => {
-    let switched = false
-    for (let i = 0; i < 30; i++) {
-      if (!switched) {
-        const modelRadio = document.querySelector(`div[role="radio"][data-model-type="${modelType}"]`)
-        if (modelRadio && modelRadio.getAttribute("aria-checked") !== "true") {
-          console.log("[BDS:Handoff] checkPendingHandoff - switching model to", modelType)
-          modelRadio.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }))
-          modelRadio.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }))
-          modelRadio.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-          for (let j = 0; j < 30; j++) {
-            const editor = findChatEditor()
-            if (editor) { editor.focus(); break }
-            await new Promise(r => setTimeout(r, 100))
-          }
-        }
-        switched = true
+    if (modelType !== "default") {
+      console.log("[BDS:Handoff] checkPendingHandoff - need to switch model to:", modelType)
+      for (let i = 0; i < 30; i++) {
+        console.log("[BDS:Handoff] checkPendingHandoff - model retry #" + i)
+        if (setDeepSeekModel(modelType)) { console.log("[BDS:Handoff] checkPendingHandoff - model switched on attempt #" + i); break }
+        await new Promise(r => setTimeout(r, 500))
       }
-
+    } else {
+      console.log("[BDS:Handoff] checkPendingHandoff - modelType=default, skipping model switch")
+    }
+    for (let i = 0; i < 30; i++) {
       const ok = await injectPureTextAndSend(full, "Context handoff")
       if (ok) {
         console.log("[BDS:Handoff] checkPendingHandoff - injected successfully")

@@ -130,7 +130,7 @@ describe("context-handoff", () => {
 
     const { checkPendingHandoff } = await import("../../src/content/commands/context-handoff.js")
     checkPendingHandoff()
-    await vi.advanceTimersByTimeAsync(100)
+    await vi.advanceTimersByTimeAsync(20000)
 
     expect(readerMocks.injectPureTextAndSend).toHaveBeenCalled()
     expect(sessionStorage.getItem("bds:pending-handoff")).toBeNull()
