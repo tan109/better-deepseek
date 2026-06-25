@@ -226,7 +226,7 @@ test("drawer import inputs stay single-file in the web flow", async ({ page }) =
 
 test("project Upload File keeps multiple mode in the web flow", async ({ page }) => {
   await openDrawer(page);
-  await page.locator("#bds-drawer button").filter({ hasText: /^Manage$/ }).click();
+  await page.locator("#bds-drawer .bds-section-title", { hasText: "Projects" }).getByRole("button", { name: "Manage" }).click();
   await page.locator("#bds-drawer button").filter({ hasText: "New Project" }).click();
   await page.locator('#bds-drawer input[placeholder="Project name (required)"]').fill("Regression Project");
   await page.locator("#bds-drawer button").filter({ hasText: "Create" }).click();

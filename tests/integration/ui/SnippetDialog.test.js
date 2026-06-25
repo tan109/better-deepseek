@@ -82,7 +82,7 @@ describe("SnippetDialog", () => {
     const saveBtn = Array.from(target.querySelectorAll("button")).find(b => b.textContent.includes("Save"));
     saveBtn.click();
     await flushUi();
-    expect(onsave).toHaveBeenCalledWith({ title: "Test Title", content: "Test content" });
+    expect(onsave).toHaveBeenCalledWith({ title: "Test Title", content: "Test content", command: null });
     cleanup();
   });
 

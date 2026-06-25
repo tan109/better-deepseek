@@ -1,7 +1,7 @@
 import { findCommand } from "./registry.js"
 import { parseCommandInput } from "./parser.js"
 import { searchWeb } from "../files/search-reader.js"
-import { injectPureTextAndSend } from "../auto.js"
+import { injectPureTextAndSend, readFileText } from "../auto.js"
 import { exportSession } from "../tools/exporter.js"
 import { performCompress, performSummarize } from "./context-handoff.js"
 import state from "../state.js"
@@ -42,7 +42,18 @@ async function executeBuiltin(cmd, args, rawArgs) {
     switch (cmd.id) {
       case "search": {
         const result = await searchWeb(rawArgs || args.join(" "), 0, () => {})
-        if (result?.file) injectFileViaNativeInput(result.file)
+        if (result?.file) {
+          if (!injectFileViaNativeInput(result.file)) {
+            let content;
+            try {
+              content = await readFileText(result.file);
+            } catch (readErr) {
+              if (state.ui) state.ui.showToast(`Search: ${readErr.message}`);
+              break;
+            }
+            await injectPureTextAndSend(content, `/search result: ${rawArgs || args.join(" ")}`);
+          }
+        }
         break
       }
       case "new":
@@ -82,7 +93,7 @@ function injectFileViaNativeInput(file) {
   const nativeInput = document.querySelector('input[type="file"][multiple]')
   if (!nativeInput) {
     if (state.ui) state.ui.showToast("Could not find file input to inject file")
-    return
+    return false
   }
   const dt = new DataTransfer()
   if (nativeInput.files) {
@@ -93,4 +104,5 @@ function injectFileViaNativeInput(file) {
   dt.items.add(file)
   nativeInput.files = dt.files
   nativeInput.dispatchEvent(new Event("change", { bubbles: true }))
+  return true
 }

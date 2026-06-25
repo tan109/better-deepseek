@@ -351,7 +351,7 @@ export async function injectPureTextAndSend(autoMessage, logLabel = "Text prompt
   return sendCurrentChatInput(logLabel);
 }
 
-async function readFileText(file) {
+export async function readFileText(file) {
   if (!file) return "";
 
   if (typeof file.text === "function") {

@@ -13,7 +13,7 @@ const readerMocks = vi.hoisted(() => ({
 }))
 
 vi.mock("../../src/content/files/search-reader.js", () => ({ searchWeb: readerMocks.searchWeb }))
-vi.mock("../../src/content/auto.js", () => ({ injectPureTextAndSend: readerMocks.injectPureTextAndSend, findChatEditor: vi.fn() }))
+vi.mock("../../src/content/auto.js", async () => ({ ...(await vi.importActual("../../src/content/auto.js")), injectPureTextAndSend: readerMocks.injectPureTextAndSend }))
 vi.mock("../../src/content/tools/exporter.js", () => ({ exportSession: readerMocks.exportSession }))
 // context-handoff.js is NOT mocked — the executor tests don't call its functions,
 // and the context-handoff tests need the real module. Its dependency injectPureTextAndSend
@@ -49,6 +49,23 @@ describe("tryExecuteRawInput", () => {
     const { tryExecuteRawInput } = await importExecutor()
     const result = tryExecuteRawInput("/search test query")
     expect(result).toBe(true)
+  })
+
+  it("falls back to text injection when no native file input exists for search", async () => {
+    readerMocks.searchWeb.mockResolvedValue({ file: new File(["# Search Results\n\n- Result 1"], "search.md", { type: "text/markdown" }) })
+    readerMocks.injectPureTextAndSend.mockResolvedValue(true)
+    state.ui = { showToast: vi.fn() }
+    state.settings.githubToken = ""
+    const { tryExecuteRawInput } = await importExecutor()
+    const result = tryExecuteRawInput("/search test fallback")
+    expect(result).toBe(true)
+    expect(readerMocks.searchWeb).toHaveBeenCalledWith("test fallback", 0, expect.any(Function))
+    // Yield to microtask queue so async executeBuiltin completes
+    await new Promise(resolve => setTimeout(resolve, 10))
+    expect(readerMocks.injectPureTextAndSend).toHaveBeenCalledWith(
+      "# Search Results\n\n- Result 1",
+      "/search result: test fallback",
+    )
   })
 
   it("shows validation error for invalid args", async () => {
