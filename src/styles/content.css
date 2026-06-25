@@ -4111,6 +4111,20 @@ textarea.bds-input,
   color: var(--bds-accent, #4d6bfe);
   background: var(--bds-accent-glow, rgba(77, 107, 254, 0.1));
 }
+.bds-cmd-args {
+  color: var(--bds-text-tertiary, #999);
+  font-size: 11px;
+  font-style: italic;
+  margin-left: 2px;
+  font-weight: 400;
+}
+.bds-cmd-footer {
+  font-size: 10px;
+  color: var(--bds-text-tertiary, #999);
+  text-align: center;
+  padding: 5px 10px;
+  border-top: 1px solid var(--bds-border, #e5e5e5);
+}
 
 /* ── Help Modal ── */
 .bds-help-modal {
