@@ -18,12 +18,25 @@ export function patchFetch(state, isChatCompletionUrl, markStart, markEnd) {
         return originalFetch.apply(this, arguments);
       }
 
+      // Capture auth token from any intercepted request for later use
+      captureAuthToken(input, init, state);
+
       // If it's a session fetch, we don't mutate request, we capture response
       if (url.includes("/api/v0/chat_session/fetch_page")) {
         const response = await originalFetch.apply(this, arguments);
         const cloned = response.clone();
         cloned.json().then(data => {
           window.dispatchEvent(new CustomEvent("bds:session-data", { detail: JSON.stringify(data) }));
+        }).catch(() => {});
+        return response;
+      }
+
+      // If it's a history messages fetch, capture response and dispatch
+      if (url.includes("/api/v0/chat/history_messages")) {
+        const response = await originalFetch.apply(this, arguments);
+        const cloned = response.clone();
+        cloned.json().then(data => {
+          window.dispatchEvent(new CustomEvent("bds:history-msgs", { detail: JSON.stringify(data) }));
         }).catch(() => {});
         return response;
       }
@@ -274,4 +287,31 @@ async function extractBodyText(input, init) {
   }
 
   return "";
+}
+
+/**
+ * Extract and store the Authorization Bearer token from a fetch request.
+ */
+function captureAuthToken(input, init, state) {
+  try {
+    let authHeader;
+    if (init && init.headers) {
+      const h = init.headers;
+      if (h instanceof Headers) {
+        authHeader = h.get("authorization");
+      } else if (Array.isArray(h)) {
+        for (const [k, v] of h) {
+          if (k.toLowerCase() === "authorization") { authHeader = v; break; }
+        }
+      } else if (typeof h === "object") {
+        authHeader = h["Authorization"] || h["authorization"];
+      }
+    }
+    if (!authHeader && input instanceof Request) {
+      authHeader = input.headers.get("authorization");
+    }
+    if (authHeader && typeof state?.setAuthToken === "function") {
+      state.setAuthToken(authHeader);
+    }
+  } catch (e) { /* ignore */ }
 }

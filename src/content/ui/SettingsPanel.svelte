@@ -64,6 +64,7 @@
   );
   let tokenPriceDisplay = $state(Boolean(appState.settings.tokenPriceDisplay));
   let collapseLongUserMessages = $state(Boolean(appState.settings.collapseLongUserMessages));
+  let loadAllHistoryOnSession = $state(Boolean(appState.settings.loadAllHistoryOnSession));
   let projectRagEnabled = $state(Boolean(appState.settings.projectRagEnabled));
   let projectRagLimit = $state(Number(appState.settings.projectRagLimit) || 5);
   let processGitignoreOnUpload = $state(Boolean(appState.settings.processGitignoreOnUpload));
@@ -130,7 +131,7 @@
       disableMemory, htmlToMarkdownMaxDepth, maxChatSessions,
       tokenPriceDisplay, projectRagEnabled, projectRagLimit,
       processGitignoreOnUpload, injectSystemDateTime, skipDeletionConfirmation, locale, syncLocale, collapseLongUserMessages,
-      customCSS
+      loadAllHistoryOnSession, customCSS
     });
   }
 
@@ -412,6 +413,7 @@
     maxChatSessions = Number(appState.settings.maxChatSessions) || 500;
     tokenPriceDisplay = Boolean(appState.settings.tokenPriceDisplay);
     collapseLongUserMessages = Boolean(appState.settings.collapseLongUserMessages);
+    loadAllHistoryOnSession = Boolean(appState.settings.loadAllHistoryOnSession);
     projectRagEnabled = Boolean(appState.settings.projectRagEnabled);
     projectRagLimit = Number(appState.settings.projectRagLimit) || 5;
     processGitignoreOnUpload = Boolean(appState.settings.processGitignoreOnUpload);
@@ -638,6 +640,7 @@
     );
     appState.settings.tokenPriceDisplay = tokenPriceDisplay;
     appState.settings.collapseLongUserMessages = collapseLongUserMessages;
+    appState.settings.loadAllHistoryOnSession = loadAllHistoryOnSession;
     appState.settings.projectRagEnabled = projectRagEnabled;
     appState.settings.projectRagLimit = Number(projectRagLimit) || 5;
     appState.settings.processGitignoreOnUpload = processGitignoreOnUpload;
@@ -1166,6 +1169,16 @@
       {t('settings.collapseLongUserMessagesHint')}
     </p> -->
 
+    <div class="bds-toggle-row">
+      <span class="bds-toggle-label">{t('settings.loadAllHistoryOnSession')}</span>
+      <label class="bds-switch">
+        <input id="bds-load-all-history" type="checkbox" bind:checked={loadAllHistoryOnSession} />
+        <span class="bds-switch-track"></span>
+      </label>
+    </div>
+    <p style="font-size: 10px; opacity: 0.5; margin: -8px 0 8px; padding-left: 0;">
+      {t('settings.loadAllHistoryHint')}
+    </p>
 
     <div class="bds-toggle-row">
       <span class="bds-toggle-label">{t('settings.projectAutoContext')}</span>

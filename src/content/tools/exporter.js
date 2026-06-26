@@ -8,6 +8,8 @@ import { extractMessageMarkdown, extractMessageRawText } from "../dom/message-te
 import { triggerTextDownload, triggerBlobDownload } from "../../lib/utils/download.js";
 import { simpleHash } from "../../lib/utils/hash.js";
 import html2canvas from "html2canvas";
+import { loadAllHistory, isLoadInProgress } from "../load-all-history.js";
+import state from "../state.js";
 
 /**
  * Collect all messages from the current chat session.
@@ -78,6 +80,50 @@ export function extractBdsCards(node) {
 }
 
 /**
+ * Convert API-sourced messages (from history_messages endpoint) to the same
+ * format used by the rest of the exporter.
+ *
+ * API message shape:
+ *   { message_id, role: "USER"|"ASSISTANT", fragments: [{type, content}], accumulated_token_usage }
+ *
+ * @param {Array} apiMessages
+ * @param {string[]} [filterIds]
+ * @returns {Array<{role:string, content:string, id:string|null, node:null, bdsCards:[]}>}
+ */
+export function collectMessagesFromApi(apiMessages, filterIds = null) {
+  const filterSet = filterIds ? new Set(filterIds) : null;
+
+  return apiMessages
+    .filter(msg => !filterSet || filterSet.has(msg.message_id))
+    .map(msg => {
+      const role = msg.role === "ASSISTANT" ? "assistant" : "user";
+      const fragments = msg.fragments || [];
+
+      let content = fragments
+        .filter(f => f.type === "REQUEST" || f.type === "RESPONSE")
+        .map(f => f.content || "")
+        .join("\n\n");
+
+      if (!content.trim()) {
+        content = fragments.map(f => f.content || "").join("\n\n");
+      }
+
+      if (!content.trim() && msg.content) {
+        content = msg.content;
+      }
+
+      return {
+        role,
+        content,
+        id: msg.message_id || null,
+        node: null,
+        bdsCards: [],
+      };
+    })
+    .filter(msg => msg.content.trim().length > 0);
+}
+
+/**
  * Get the session title from the document.
  */
 export function getSessionTitle() {
@@ -141,7 +187,28 @@ function isDarkMode() {
  * @param {string[]} [filterIds] Optional list of message IDs to include
  */
 export async function exportSession(format, filterIds = null) {
-  const messages = collectMessages(filterIds);
+  let messages;
+
+  // If load-on-demand is enabled, try to load all history first so the export
+  // includes messages that DeepSeek's lazy-load hasn't rendered yet.
+  if (state.settings.loadAllHistoryOnSession) {
+    const apiMessages = await loadAllHistory();
+    if (apiMessages && apiMessages.length > 0) {
+      messages = collectMessagesFromApi(apiMessages, filterIds);
+    }
+  }
+
+  // Fall back to DOM-based collection if API data wasn't available
+  if (!messages || !messages.length) {
+    const hasDomIds = filterIds?.length ? filterIds.some(id => String(id).startsWith("msg-")) : true;
+    if (hasDomIds) {
+      messages = collectMessages(filterIds);
+    } else {
+      console.warn("[BDS] API data loaded but no messages matched the filter. Try exporting without select-all, or reload the page.");
+      return;
+    }
+  }
+
   if (!messages.length) {
     console.warn("[BDS] No messages found to export.");
     return;

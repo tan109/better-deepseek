@@ -2,6 +2,7 @@
   import appState from "../state.js";
   import { exportSession, collectMessages } from "../tools/exporter.js";
   import { scheduleScan } from "../scanner.js";
+  import { loadAllHistory } from "../load-all-history.js";
   import { t } from "../../lib/i18n.svelte.js";
 
   let selectionMode = $state(appState.selectionMode);
@@ -62,19 +63,37 @@
     window.dispatchEvent(new CustomEvent("bds:selectionChanged"));
   }
 
-  function selectAll() {
-    const checkboxes = document.querySelectorAll(".bds-selection-checkbox");
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  async function selectAll() {
+    const apiMessages = appState.settings.loadAllHistoryOnSession
+      ? await loadAllHistory()
+      : null;
 
-    checkboxes.forEach(cb => {
-      cb.checked = !allChecked;
-      const id = cb.getAttribute("data-bds-message-id");
-      if (!allChecked) {
-        appState.selectedMessageIds.add(id);
-      } else {
-        appState.selectedMessageIds.delete(id);
+    const checkboxes = document.querySelectorAll(".bds-selection-checkbox");
+    const apiIds = apiMessages?.length
+      ? apiMessages.map(m => m.message_id).filter(Boolean)
+      : [];
+
+    if (apiIds.length > 0) {
+      // API-based: use server message_ids (no duplication with DOM random IDs)
+      const allSelected = apiIds.every(id => appState.selectedMessageIds.has(id));
+      appState.selectedMessageIds.clear();
+      checkboxes.forEach(cb => { cb.checked = !allSelected; });
+      if (!allSelected) {
+        for (const id of apiIds) appState.selectedMessageIds.add(id);
       }
-    });
+    } else {
+      // Fallback: DOM-only (original behavior)
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+        const id = cb.getAttribute("data-bds-message-id");
+        if (!allChecked) {
+          appState.selectedMessageIds.add(id);
+        } else {
+          appState.selectedMessageIds.delete(id);
+        }
+      });
+    }
 
     selectedCount = appState.selectedMessageIds.size;
     window.dispatchEvent(new CustomEvent("bds:selectionChanged"));
@@ -84,6 +103,11 @@
     if (selectedCount === 0) {
       alert(t('selectionOverlay.exportHint'));
       return;
+    }
+
+    // Load all history so even unselected (but visible) IDs are available for export
+    if (appState.settings.loadAllHistoryOnSession) {
+      await loadAllHistory();
     }
 
     await exportSession(format, Array.from(appState.selectedMessageIds));

@@ -49,6 +49,14 @@ export function setupBridgeEvents() {
     handleSessionData(data);
   });
 
+  window.addEventListener("bds:history-msgs", (event) => {
+    let data = event.detail;
+    if (typeof data === "string") {
+      try { data = JSON.parse(data); } catch (e) { return; }
+    }
+    handleHistoryMessages(data);
+  });
+
   window.addEventListener("bds:token-usage", (event) => {
     let data = event.detail;
     if (typeof data === "string") {
@@ -145,6 +153,41 @@ function handleSessionData(data) {
 
   // Trigger UI update if needed
   window.dispatchEvent(new CustomEvent("bds:sessions-updated"));
+}
+
+/**
+ * Handle history messages data from the API.
+ * Stores messages in state keyed by session ID and notifies waiters.
+ */
+function handleHistoryMessages(data) {
+  const bizData = data?.data?.biz_data;
+  if (!bizData) return;
+
+  const sessionId = bizData.chat_session?.id;
+  if (!sessionId) return;
+
+  const incomingMessages = bizData.chat_messages;
+  if (!Array.isArray(incomingMessages) || incomingMessages.length === 0) return;
+
+  const cacheControl = bizData.cache_control || "APPEND";
+
+  if (!state.chatMessagesBySession.has(sessionId) || cacheControl === "REPLACE") {
+    state.chatMessagesBySession.set(sessionId, []);
+  }
+
+  const existing = state.chatMessagesBySession.get(sessionId);
+  const existingIds = new Set(existing.map(m => m.message_id));
+
+  for (const msg of incomingMessages) {
+    if (!existingIds.has(msg.message_id)) {
+      existing.push(msg);
+      existingIds.add(msg.message_id);
+    }
+  }
+
+  window.dispatchEvent(new CustomEvent("bds:history-msgs-loaded", {
+    detail: JSON.stringify({ sessionId, count: existing.length })
+  }));
 }
 
 /**

@@ -42,6 +42,8 @@ const state = {
   heroBarRef: null,
   /** @type {Array<{id:string,title:string,updatedAt:number}>} persistent session cache */
   chatSessions: [],
+  /** @type {Map<string, Array<{message_id:string, role:string, fragments:Array<{type:string, content:string}>, accumulated_token_usage?: {input_tokens?:number, output_tokens?:number, total_tokens?:number}}>>} API-loaded messages keyed by session ID */
+  chatMessagesBySession: new Map(),
   /** Token price tracking — session-level totals */
   pricing: {
     /** @type {string|null} current model being used */

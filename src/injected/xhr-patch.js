@@ -16,6 +16,7 @@ export function patchXmlHttpRequest(
 ) {
   const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
+  const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
 
   XMLHttpRequest.prototype.open = function patchedOpen(method, url) {
     this.__bdsRequestMeta = {
@@ -23,6 +24,13 @@ export function patchXmlHttpRequest(
       url: String(url || ""),
     };
     return originalOpen.apply(this, arguments);
+  };
+
+  XMLHttpRequest.prototype.setRequestHeader = function patchedSetRequestHeader(header, value) {
+    if (header && String(header).toLowerCase() === "authorization" && typeof state?.setAuthToken === "function") {
+      state.setAuthToken(String(value || ""));
+    }
+    return originalSetRequestHeader.apply(this, arguments);
   };
 
   XMLHttpRequest.prototype.send = function patchedSend(body) {
@@ -37,6 +45,16 @@ export function patchXmlHttpRequest(
           try {
             const data = JSON.parse(this.responseText);
             window.dispatchEvent(new CustomEvent("bds:session-data", { detail: JSON.stringify(data) }));
+          } catch (e) {}
+        });
+        return originalSend.call(this, body);
+      }
+
+      if (meta.url.includes("/api/v0/chat/history_messages")) {
+        this.addEventListener("load", () => {
+          try {
+            const data = JSON.parse(this.responseText);
+            window.dispatchEvent(new CustomEvent("bds:history-msgs", { detail: JSON.stringify(data) }));
           } catch (e) {}
         });
         return originalSend.call(this, body);

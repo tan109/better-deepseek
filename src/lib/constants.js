@@ -715,6 +715,8 @@ export const DEFAULT_SETTINGS = {
   deepResearchContextGuardEnabled: true,
   deepResearchContextLimitTokens: 128000,
   deepResearchContextStopPercent: 70,
+  // Load all history — scroll to top on session open to trigger lazy-load
+  loadAllHistoryOnSession: false,
 };
 
 // ── Default Remote Config (built-in fallback) ──

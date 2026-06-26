@@ -23,6 +23,7 @@ import { patchXmlHttpRequest } from "./xhr-patch.js";
   };
 
   const SESSION_FETCH_URL = "/api/v0/chat_session/fetch_page";
+  const HISTORY_MSGS_URL = "/api/v0/chat/history_messages";
 
   const CHAT_COMPLETION_PATH = "/api/v0/chat/completion";
 
@@ -83,6 +84,14 @@ import { patchXmlHttpRequest } from "./xhr-patch.js";
     currentSessionChar: null, // memory cache for default ID transition
     activeCompletionRequests: 0,
     isNextVoiceMessage: false,
+    /** @type {string|null} Bearer token captured from API requests */
+    authToken: null,
+    /** @type {function(string): void} Store the Authorization header value */
+    setAuthToken: function(token) {
+      if (token && token !== this.authToken) {
+        this.authToken = token;
+      }
+    },
   };
 
   // ── Guard against double-injection ──
@@ -159,8 +168,39 @@ import { patchXmlHttpRequest } from "./xhr-patch.js";
     state.isNextVoiceMessage = true;
   });
 
+  // ── Listen for on-demand history messages request ──
+  window.addEventListener("bds:request-history-msgs", async (event) => {
+    let detail = event && event.detail ? event.detail : {};
+    if (typeof detail === "string") {
+      try { detail = JSON.parse(detail); } catch { return; }
+    }
+    const sessionId = detail?.sessionId;
+    if (!sessionId) return;
+
+    const url = `${HISTORY_MSGS_URL}?chat_session_id=${encodeURIComponent(sessionId)}`;
+    const headers = { "Content-Type": "application/json" };
+    if (state.authToken) {
+      headers["Authorization"] = `Bearer ${state.authToken}`;
+    }
+
+    try {
+      const response = await _originalFetch(url, { method: "GET", headers, credentials: "include" });
+      if (!response.ok) {
+        console.warn("[BDS] history_mgs fetch failed:", response.status);
+        return;
+      }
+      const data = await response.json();
+      window.dispatchEvent(new CustomEvent("bds:history-msgs", { detail: JSON.stringify(data) }));
+    } catch (e) {
+      console.warn("[BDS] history_msgs fetch error:", e);
+    }
+  });
+
   // ── Request initial config ──
   requestConfigFromContentScript();
+
+  // ── Capture original fetch before patching, for internal use ──
+  const _originalFetch = window.fetch.bind(window);
 
   // ── Patch network APIs ──
   patchFetch(state, isChatCompletionUrl, markCompletionRequestStart, markCompletionRequestEnd);
@@ -174,7 +214,7 @@ import { patchXmlHttpRequest } from "./xhr-patch.js";
 
   function isChatCompletionUrl(url) {
     const s = String(url || "");
-    return s.includes("/api/v0/chat/completion") || s.includes("/api/v0/chat/edit_message") || s.includes(SESSION_FETCH_URL);
+    return s.includes("/api/v0/chat/completion") || s.includes("/api/v0/chat/edit_message") || s.includes(SESSION_FETCH_URL) || s.includes(HISTORY_MSGS_URL);
   }
 
   function emitNetworkState(status, url) {
