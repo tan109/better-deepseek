@@ -725,6 +725,23 @@
       "seeAllChanges": "v{{version}} sürümündeki tüm değişiklikleri GitHub'da gör",
       "seeDetailed": "Detaylı sürüm notlarını GitHub'da gör",
       "features": {
+        "v0_1_10": {
+          "title": "Kararlılık ve İyileştirmeler",
+          "features": {
+            "feat_0": {
+              "title": "Görsel Desteği",
+              "description": "DeepSeek, yeni BDS:IMAGE etiketi sayesinde doğrudan sohbet içinde Wikimedia Commons'tan görsel arayabilir ve görüntüleyebilir."
+            },
+            "feat_1": {
+              "title": "Eğik Çizgi Komut Sistemi",
+              "description": "Otomatik tamamlama, bağlam aktarımı, yerleşik komutlar ve kaydedilmiş snippet'lardan özel komut oluşturma özelliğine sahip tam bir eğik çizgi komut alt sistemi."
+            },
+            "feat_2": {
+              "title": "Hata Düzeltmeleri ve UX İyileştirmeleri",
+              "description": "Eklenti genelinde çok sayıda hata düzeltmesi ve kullanıcı deneyimi iyileştirmesi."
+            }
+          }
+        },
         "v0_1_9": {
           "title": "Çoklu Sistem Promptları, Visualizer Yenilemesi ve Derin Araştırma",
           "features": {

@@ -341,6 +341,17 @@ Better DeepSeek does not collect, transmit, or sell any personal data. All setti
 
 ## Changelog
 
+### v0.1.10 (2026-06-30)
+- **New Feature**: BDS:IMAGE Tag with Wikimedia Commons. DeepSeek can now search and display images from Wikimedia Commons directly in conversations. Supports query, count, width, category, caption attributes, fullscreen viewer with keyboard navigation, lazy loading, and result caching.
+- **New Feature**: Slash-Command System. A complete command subsystem with autocomplete, argument hints, and keyboard shortcuts. Built-in commands for common tasks, custom command-to-snippet mapping, and a context hand-off feature that compresses long conversations and opens a fresh session with summarized context. You can also define your own commands using saved snippets.
+- **New Feature**: Load All History. Fetch full session history from the DeepSeek API, enabling complete exports and accurate token usage calculations even for sessions with lazy-loaded messages.
+- **New Feature**: Message Timestamps. Display precise timestamps for each message. Configurable via a toggle in Settings.
+- **New Feature**: Lua & Ruby Code Runners. DeepSeek can now write and execute Lua and Ruby code directly in the chat, powered by Fengari and Opal runtimes.
+- **Deep Research Improvements**: Added 128K context budget guard to prevent context window overflow, adaptive step handling with deduplication and validation, automatic recovery from AUTO tag emission issues, report synthesis, and auto search narrowing with DDG/Bing fallback ranking. (Thanks to [@WhiteLicorice](https://github.com/WhiteLicorice)).
+- **New Feature**: Search functionality in SettingsPanel to quickly find settings. Advanced settings grouped into collapsible accordions for a cleaner experience.
+- **UI/UX Improvements**: Enhanced markdown styling using design system variables. BDS tool cards now appear at their original position within the message text instead of being appended at the end, with improved markdown styling throughout.
+- **Bug Fixes**: Escape character handling in AI-generated BDS tag content. Whitespace preservation in code blocks. Improved send button detection and retry logic. Markdown reconstruction and list handling improvements. Various stability fixes.
+
 ### v0.1.9 (2026-06-13)
 - **New Feature**: Multi-System Prompt Mode & Advanced Scheduling. Use multiple system prompt entries with per-entry scheduling - first message, every N turns, or always.
 - **New Feature**: DeepResearch. Tell DeepSeek a topic, review the generated plan, and upon approval it conducts deep multi-step research automatically. (Thanks to [@WhiteLicorice](https://github.com/WhiteLicorice)).

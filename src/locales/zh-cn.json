@@ -732,6 +732,23 @@
       "seeAllChanges": "在 GitHub 上查看 v{{version}} 的全部变更",
       "seeDetailed": "在 GitHub 上查看详细发布说明",
       "features": {
+        "v0_1_10": {
+          "title": "稳定性与改进",
+          "features": {
+            "feat_0": {
+              "title": "图片支持",
+              "description": "DeepSeek 现在可以通过新的 BDS:IMAGE 标签直接在对话中搜索和显示 Wikimedia Commons 中的图片。"
+            },
+            "feat_1": {
+              "title": "斜杠命令系统",
+              "description": "完整的斜杠命令子系统，支持自动补全、上下文传递、内置命令，以及从已保存的片段创建自定义命令。"
+            },
+            "feat_2": {
+              "title": "问题修复与体验改进",
+              "description": "扩展各处的大量问题修复与用户体验优化。"
+            }
+          }
+        },
         "v0_1_9": {
           "title": "多系统提示词、可视化工具重构与深度研究",
           "features": {

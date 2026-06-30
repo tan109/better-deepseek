@@ -1,5 +1,27 @@
 export const VERSION_HISTORY = [
   {
+    version: "0.1.10",
+    date: "2026-06-30",
+    title: "Stability & Improvement",
+    features: [
+      {
+        type: "feature",
+        title: "Image Support",
+        description: "DeepSeek can now search and display images from Wikimedia Commons directly in the conversation with the new BDS:IMAGE tag."
+      },
+      {
+        type: "feature",
+        title: "Slash-Command System",
+        description: "A full slash-command subsystem with autocomplete, context hand-off, built-in commands, and the ability to create custom commands from saved snippets."
+      },
+      {
+        type: "bugfix",
+        title: "Bug Fixes & UX Improvements",
+        description: "Numerous bug fixes and UX refinements across the extension."
+      }
+    ]
+  },
+  {
     version: "0.1.9",
     date: "2026-06-13",
     title: "Multi-System Prompts, Visualizer Rework & Deep Research",

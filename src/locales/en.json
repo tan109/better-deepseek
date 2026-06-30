@@ -736,6 +736,23 @@
       "seeAllChanges": "See all changes in v{{version}} on GitHub",
       "seeDetailed": "See detailed release notes on GitHub",
       "features": {
+        "v0_1_10": {
+          "title": "Stability & Improvement",
+          "features": {
+            "feat_0": {
+              "title": "Image Support",
+              "description": "DeepSeek can now search and display images from Wikimedia Commons directly in the conversation with the new BDS:IMAGE tag."
+            },
+            "feat_1": {
+              "title": "Slash-Command System",
+              "description": "A full slash-command subsystem with autocomplete, context hand-off, built-in commands, and the ability to create custom commands from saved snippets."
+            },
+            "feat_2": {
+              "title": "Bug Fixes & UX Improvements",
+              "description": "Numerous bug fixes and UX refinements across the extension."
+            }
+          }
+        },
         "v0_1_9": {
           "title": "Multi-System Prompts, Visualizer Rework & Deep Research",
           "features": {
