@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-16T00:00:00Z",
+  "updatedAt": "2026-06-30T00:00:00Z",
   "messages": {
     "common": {
       "save": "保存",
@@ -119,12 +119,19 @@
       "githubTokenClear": "清空",
       "tokenPriceEstimation": "Token 费用估算（实验性）",
       "tokenPriceHint": "显示每条消息和会话的 DeepSeek API 估算费用，基于输入/输出 token 价格计算。价格数据动态拉取，获取失败时使用备用数据。",
+      "deepResearchContextGuard": "深度研究上下文保护",
+      "contextGuardEnabled": "启用上下文保护",
+      "contextGuardEnabledHint": "在会话上下文窗口耗尽前自动停止深度研究。该功能会追踪隐藏的扩展提示词、证据摘要以及服务端上报的用量数据。",
+      "contextGuardLimit": "上下文上限（tokens）",
+      "contextGuardLimitHint": "DeepSeek 网页版会话的上下文窗口大小，默认为 128,000 tokens。",
+      "contextGuardStopPercent": "停止阈值（%）",
+      "contextGuardStopPercentHint": "当预估上下文用量达到 {{threshold}} tokens 时停止深度研究。取值范围为 50%–95%。",
       "collapseLongUserMessages": "折叠过长的用户消息",
       "collapseLongUserMessagesHint": "自动折叠过长的用户消息，点击“查看更多”展开。",
       "loadAllHistoryOnSession": "打开会话时加载全部历史记录",
-      "loadAllHistoryHint": "滚动到对话顶部触发 DeepSeek 的懒加载，确保所有消息可用于导出和费用计算。长对话可能较慢。默认关闭。",
+      "loadAllHistoryHint": "自动滚动至对话顶部以触发 DeepSeek 的懒加载机制，确保全部消息均可导出并纳入费用计算。处理长对话时可能较慢，默认关闭。",
       "showTimestamps": "显示消息时间戳",
-      "showTimestampsHint": "在聊天中显示每条消息发送或接收的精确时间。",
+      "showTimestampsHint": "在聊天中显示每条消息的精确收发时间。",
       "save": "保存设置",
       "ragChunks": "RAG 最大注入片段数",
       "ragChunks3": "3 个片段（约 600 词）",
@@ -173,7 +180,7 @@
       "editingSnippet": "正在编辑片段: {{name}}",
       "exitEditMode": "退出编辑模式",
       "noSnippets": "暂无 CSS 片段。",
-      "advancedSearchPlaceholder": "搜索设置...",
+      "advancedSearchPlaceholder": "搜索设置…",
       "advancedNoResults": "未找到匹配的设置。"
     },
     "skillList": {
@@ -412,6 +419,11 @@
       "hideOutput": "隐藏输出 ▴",
       "showOutput": "显示输出 ▾"
     },
+    "searchResult": {
+      "searching": "正在 DuckDuckGo 中搜索…",
+      "resultsFor": "关于“{{query}}”的搜索结果",
+      "resultCount": "共找到 {{count}} 条结果"
+    },
     "autoCodeRunner": {
       "aiWantsToRun": "AI 想要运行 {{lang}} 代码",
       "safeSandbox": "将在安全的沙盒环境中执行。",
@@ -428,16 +440,11 @@
       "showCode": "显示代码 ▾",
       "consoleOutput": "控制台输出"
     },
-    "searchResult": {
-      "searching": "正在 DuckDuckGo 中搜索…",
-      "resultsFor": "关于“{{query}}”的搜索结果",
-      "resultCount": "共找到 {{count}} 条结果"
-    },
     "toolCard": {
       "pythonRunner": "Python 运行器"
     },
     "imageCard": {
-      "searching": "正在搜索 Wikimedia...",
+      "searching": "正在搜索 Wikimedia…",
       "close": "关闭",
       "notFound": "未找到图片"
     },
@@ -542,6 +549,12 @@
       "searchRequested": "正在调用 DuckDuckGo 搜索…",
       "memoryStored": "已存储记忆（{{count}} 条）。"
     },
+    "sidebarMenu": {
+      "tags": "标签（BDS）",
+      "exportChat": "导出聊天（BDS）",
+      "getBdsApp": "获取 BDS 应用",
+      "whatsNew": "更新内容"
+    },
     "savedItems": {
       "title": "已保存项目",
       "bookmarks": "书签",
@@ -563,7 +576,7 @@
       "importSuccess": "已导入 {{count}} 个项目",
       "importFailed": "导入失败：{{msg}}",
       "namePlaceholder": "片段名称",
-      "contentPlaceholder": "在此粘贴你的提示词或消息...",
+      "contentPlaceholder": "在此粘贴你的提示词或消息…",
       "contentRequired": "内容为必填项。",
       "save": "保存",
       "cancel": "取消",
@@ -575,32 +588,26 @@
       "dateMinAgo": "{{count}} 分钟前",
       "dateHourAgo": "{{count}} 小时前"
     },
-    "sidebarMenu": {
-      "tags": "标签（BDS）",
-      "exportChat": "导出聊天（BDS）",
-      "getBdsApp": "获取 BDS 应用",
-      "whatsNew": "更新内容"
-    },
     "commands": {
       "title": "命令",
       "manage": "管理",
-      "helpTitle": "命令",
-      "search": "搜索命令...",
+      "helpTitle": "命令帮助",
+      "search": "搜索命令…",
       "all": "全部",
       "noCommands": "未找到命令",
       "addCommand": "添加命令",
       "remove": "删除",
-      "noCustomCommands": "暂无自定义命令。请在上面映射一个片段。",
+      "noCustomCommands": "暂无自定义命令，可将上方片段映射为快捷命令。",
       "builtinCommands": "内置命令",
-      "unknownCommand": "未知命令: /{{cmd}}。输入 /help 查看可用命令。",
-      "cmdRequired": "命令为必填项",
+      "unknownCommand": "未知命令：/{{cmd}}。输入 /help 查看可用命令。",
+      "cmdRequired": "命令不能为空",
       "cmdInvalidChars": "仅允许小写字母、数字和下划线",
       "cmdConflictBuiltin": "与内置命令冲突",
       "cmdConflictSnippet": "该命令已被其他片段占用",
       "cmdPlaceholder": "命令（可选）",
       "cmdOk": "确定",
-      "selectSnippet": "选择片段...",
-      "compress": "总结对话并以完整上下文开始新会话",
+      "selectSnippet": "选择片段…",
+      "compress": "压缩对话上下文，以完整上下文开启新会话",
       "summarize": "生成对话交接摘要",
       "done": "完成",
       "commandShortcuts": "命令快捷键",
@@ -614,7 +621,7 @@
       "cmdNewUsage": "/new",
       "cmdExportDesc": "导出对话（markdown、pdf、html、图片）",
       "cmdExportUsage": "/export <格式>",
-      "cmdCompressDesc": "总结对话并以完整上下文开始新会话",
+      "cmdCompressDesc": "压缩对话上下文，以完整上下文开启新会话",
       "cmdCompressUsage": "/compress",
       "cmdSummarizeDesc": "生成当前对话的交接摘要",
       "cmdSummarizeUsage": "/summarize",
@@ -691,8 +698,8 @@
       "powerpoint": "PowerPoint",
       "presentation": "演示文稿",
       "bdsTool": "BDS 工具",
-      "imageTooLong": "会话过长 ({{height}}k 像素, {{scale}}x)。图像可能在 {{limit}}k 像素处被裁剪。请使用 PDF 或 HTML。",
-      "imageFailed": "图片导出受限于浏览器画布大小限制。请尝试导出更少的消息，或使用 PDF/HTML/MD。"
+      "imageTooLong": "会话过长（{{height}}k 像素，{{scale}}x）。图像可能在 {{limit}}k 像素处被裁剪。请改用 PDF 或 HTML 格式。",
+      "imageFailed": "图片导出受浏览器画布尺寸限制。请减少导出消息数量，或改用 PDF/HTML/MD 格式。"
     },
     "auto": {
       "fetchFailed": "抓取 {{url}} 失败：\n\n{{msg}}",
