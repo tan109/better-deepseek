@@ -281,4 +281,40 @@ describe("scanner input controls", () => {
     expect(deepResearchMount).toBeTruthy();
     expect(mountMock.mock.calls[0][0]).toBe(deepResearchToggleMock);
   });
+
+  it("rejects login/auth form — no deep research mount", async () => {
+    document.body.innerHTML = `
+      <div id="login-form">
+        <input type="text" placeholder="Email or phone number" />
+        <input type="password" placeholder="Password" />
+        <button type="submit">Log in</button>
+      </div>
+    `;
+    const { scanInputArea } = await import("../../src/content/scanner.js");
+
+    scanInputArea();
+
+    expect(document.querySelector(".bds-deep-research-mount")).toBeNull();
+    expect(mountMock).not.toHaveBeenCalled();
+  });
+
+  it("mounts deep research on root URL chat composer when chat markers present", async () => {
+    document.body.innerHTML = `
+      <div id="composer">
+        <textarea id="chat-input" placeholder="Message DeepSeek"></textarea>
+        <div id="prompt-actions">
+          <button id="deepthink" type="button">DeepThink</button>
+        </div>
+        <div id="send-cluster">
+          <button id="send" title="Send message" type="button"></button>
+        </div>
+      </div>
+    `;
+    const { scanInputArea } = await import("../../src/content/scanner.js");
+
+    scanInputArea();
+
+    expect(document.querySelector(".bds-deep-research-mount")).toBeTruthy();
+    expect(mountMock).toHaveBeenCalled();
+  });
 });

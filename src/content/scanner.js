@@ -176,6 +176,35 @@ function scanPage() {
 }
 
 /**
+ * Check whether the current page has a genuine chat composer surface.
+ *
+ * Returns true only when at least one chat-specific marker is found:
+ *   - multi-file upload input
+ *   - native DeepThink / prompt action row
+ *   - DeepSeek send button
+ *   - #chat-input textarea, .ds-textarea textarea, or contenteditable rich editor
+ *
+ * If the only "editor" found is a plain <input> (text/email/tel/password with
+ * placeholder — typical of login/auth pages) with none of the markers above,
+ * this is not a chat composer and Deep Research / attach controls must not mount.
+ */
+function isChatComposer() {
+  if (findActiveFileInput()) return true;
+  if (findNativePromptActionRow()) return true;
+  if (findDeepSeekSendButton()) return true;
+
+  const editor = findComposerEditor();
+  if (!editor) return false;
+
+  const tag = editor.tagName.toLowerCase();
+  // textarea or contenteditable = rich chat composer
+  if (tag === "textarea" || editor.isContentEditable) return true;
+
+  // plain <input> with no chat markers = auth/form page
+  return false;
+}
+
+/**
  * Scan for the chat text input area to inject custom attachment menu
  */
 export function scanInputArea() {
@@ -183,6 +212,11 @@ export function scanInputArea() {
   const wrapper = findComposerControlsWrapper(fileInput);
   const deepResearchWrapper = findDeepResearchControlsWrapper(fileInput, wrapper);
   if (!deepResearchWrapper) {
+    return;
+  }
+
+  // Surface check: reject login/auth forms that lack chat-specific markers.
+  if (!isChatComposer()) {
     return;
   }
 

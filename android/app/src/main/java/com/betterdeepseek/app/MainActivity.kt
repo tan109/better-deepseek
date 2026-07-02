@@ -139,7 +139,6 @@ class MainActivity : ComponentActivity() {
 
         bridge = WebViewBridge(applicationContext)
         cookieManager = CookieManager.getInstance()
-        applySystemLocaleCookie()
 
         bridge.onPickFiles = { mode, requestId ->
             pendingPickFilesRequestId = requestId
@@ -189,6 +188,9 @@ class MainActivity : ComponentActivity() {
                     setBackgroundColor(if (isPageDark) PAGE_BG_DARK else PAGE_BG_LIGHT)
                 }
 
+        configureWebViewCookiePolicy(webView)
+        applySystemLocaleCookie()
+
         // FrameLayout wrapper receives system-bar padding and expands its bottom inset for IME.
         // WebView.setPadding() does not shift the viewport reliably, so the wrapper is the
         // inset target. Its background fills the padding band behind the system bars.
@@ -237,6 +239,12 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private fun configureWebViewCookiePolicy(webView: WebView) {
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(webView, true)
+        cookieManager.flush()
+    }
+
     private fun applySystemLocaleCookie() {
         val localeTag =
                 bridge.getSystemLocale()
@@ -244,7 +252,6 @@ class MainActivity : ComponentActivity() {
                         .filter { it.isLetterOrDigit() || it == '-' }
         if (localeTag.isBlank()) return
 
-        cookieManager.setAcceptCookie(true)
         cookieManager.setCookie(
                 getString(R.string.bds_target_url),
                 "NEXT_LOCALE=$localeTag; Path=/; SameSite=Lax"
@@ -319,6 +326,10 @@ class MainActivity : ComponentActivity() {
                         request: WebResourceRequest
                 ): Boolean {
                     val url = request.url ?: return false
+                    // Never externalize subframe/iframe navigations (e.g. hCaptcha captcha
+                    // iframes, embedded auth flows). Only top-level navigation decisions are
+                    // delegated to shouldOpenExternally.
+                    if (!request.isForMainFrame) return false
                     if (!shouldOpenExternally(url, getString(R.string.bds_asset_authority))) {
                         return false
                     }
