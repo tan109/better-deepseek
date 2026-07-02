@@ -221,6 +221,11 @@ class MainActivity : ComponentActivity() {
         }
 
         setContentView(rootLayout)
+
+        // Accept third-party cookies so hCaptcha iframe auth on the DeepSeek login page
+        // can store session state in the embedded captcha widget.
+        cookieManager.setAcceptThirdPartyCookies(webView, true)
+
         webView.loadUrl(getString(R.string.bds_target_url))
 
         onBackPressedDispatcher.addCallback(
@@ -319,6 +324,10 @@ class MainActivity : ComponentActivity() {
                         request: WebResourceRequest
                 ): Boolean {
                     val url = request.url ?: return false
+                    // Never externalize subframe/iframe navigations (e.g. hCaptcha captcha
+                    // iframes, embedded auth flows). Only top-level navigation decisions are
+                    // delegated to shouldOpenExternally.
+                    if (!request.isForMainFrame) return false
                     if (!shouldOpenExternally(url, getString(R.string.bds_asset_authority))) {
                         return false
                     }
