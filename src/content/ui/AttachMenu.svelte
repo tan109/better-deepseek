@@ -629,7 +629,7 @@
       return;
     }
 
-    if (!nativeInput) return;
+    if (!resolveNativeInput()) return;
 
     try {
       const result = await pickFolderAndConcatenate({
@@ -863,7 +863,7 @@
   }
 
   function attachPanelFiles() {
-    if (!nativeInput || !panelTickedIds.length) return;
+    if (!resolveNativeInput() || !panelTickedIds.length) return;
     const activeFiles = panelFiles.filter((f) => panelTickedIds.includes(f.id));
     if (!activeFiles.length) return;
     const activeProject = panelProjects.find(
