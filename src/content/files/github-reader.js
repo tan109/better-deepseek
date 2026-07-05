@@ -96,7 +96,13 @@ export function parseGitHubUrl(input) {
       branch = parts.slice(3).join("/");
     }
 
-    return { owner, repo, branch };
+    let filePath = null;
+    if (parts[2] === "blob" && parts.length > 4) {
+      branch = parts[3];
+      filePath = parts.slice(4).join("/");
+    }
+
+    return { owner, repo, branch, filePath };
   } catch {
     return null;
   }
@@ -146,16 +152,83 @@ export function preferGitHubFailure(current, next) {
   return next;
 }
 
+export async function fetchGitHubFile(owner, repo, branch, filePath, onStatus = () => { }, options = {}) {
+  const token = String(
+    typeof options.token === "string" ? options.token : ""
+  ).trim();
+
+  onStatus(`Fetching ${filePath}...`);
+
+  let content = null;
+
+  if (!token) {
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+    try {
+      const res = await fetch(rawUrl);
+      if (res.ok) {
+        content = await res.text();
+      } else if (res.status === 404) {
+        throw new Error(`File not found: ${filePath} (on branch ${branch}). Check the path and branch.`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("File not found")) {
+        throw error;
+      }
+    }
+  }
+
+  if (content === null) {
+    const result = await chrome.runtime.sendMessage({
+      type: "bds-fetch-github-file",
+      owner,
+      repo,
+      path: filePath,
+      branch,
+      token: token || undefined,
+    });
+
+    if (!result || !result.ok || typeof result.text !== "string") {
+      throw buildGitHubFetchError(
+        result,
+        `Could not fetch ${filePath} from ${owner}/${repo}. Check the URL, branch, and (for private repos) your token.`
+      );
+    }
+
+    content = result.text;
+  }
+
+  onStatus("Creating file...");
+
+  const fileName = filePath.split("/").pop() || `${repo}_file.txt`;
+  const output =
+    `Repository: ${owner}/${repo}/${branch}\n` +
+    `File: ${filePath}\n` +
+    `${"=".repeat(48)}\n\n` +
+    content;
+
+  const blob = new Blob([output], { type: "text/plain" });
+  const file = new File([blob], fileName, { type: "text/plain" });
+  Object.defineProperty(file, "bdsGitHub", {
+    value: { owner, repo, branch, filePath, singleFile: true },
+    configurable: true,
+  });
+  return file;
+}
+
 export async function fetchGitHubRepo(repoUrl, onStatus = () => { }, options = {}) {
   const parsed = parseGitHubUrl(repoUrl);
   if (!parsed) {
     throw new Error("Invalid GitHub URL. Use: https://github.com/owner/repo");
   }
 
-  const { owner, repo, branch } = parsed;
+  const { owner, repo, branch, filePath } = parsed;
   const token = String(
     typeof options.token === "string" ? options.token : ""
   ).trim();
+
+  if (filePath) {
+    return fetchGitHubFile(owner, repo, branch, filePath, onStatus, options);
+  }
 
   // Try main, then master as fallback
   // Fetch via background service worker to bypass CORS

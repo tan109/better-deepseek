@@ -47,6 +47,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "bds-fetch-github-file") {
+    fetchGithubFile(
+      message.owner,
+      message.repo,
+      message.path,
+      message.branch,
+      message.token,
+    )
+      .then((text) => {
+        sendResponse({ ok: true, text });
+      })
+      .catch((error) => {
+        sendResponse({
+          ok: false,
+          error: String(error && error.message ? error.message : error),
+          status:
+            error && Number.isFinite(error.status) ? Number(error.status) : null,
+          authRejected: Boolean(error && error.authRejected),
+          rateLimited: Boolean(error && error.rateLimited),
+        });
+      });
+    return true;
+  }
+
   if (message.type === "bds-fetch-github-commits") {
     fetchGithubCommits(
       message.owner,
@@ -261,6 +285,53 @@ async function fetchGithubZip(url, token) {
   }
 
   return await readZipResponse(await fetch(url), url);
+}
+
+export async function fetchGithubFile(owner, repo, path, branch, token) {
+  const safeOwner = String(owner || "").trim();
+  const safeRepo = String(repo || "").trim();
+  const safePath = String(path || "").trim();
+  const safeBranch = String(branch || "").trim() || "main";
+  const trimmedToken = String(token || "").trim();
+
+  if (!safeOwner || !safeRepo || !safePath) {
+    throw new Error("Missing owner, repo, or file path.");
+  }
+
+  const url = new URL(
+    `https://api.github.com/repos/${safeOwner}/${safeRepo}/contents/${safePath}`,
+  );
+  url.searchParams.set("ref", safeBranch);
+
+  const headers = buildGithubApiHeaders(trimmedToken);
+  headers.Accept = "application/vnd.github.raw";
+
+  const resp = await fetch(url.toString(), { headers });
+
+  if (!resp.ok) {
+    const bodyText = await resp.text();
+
+    if (isGithubRateLimitResponse(resp, bodyText)) {
+      throw createGithubFetchError(
+        `GitHub API rate limit exceeded fetching ${safePath}`,
+        { status: resp.status, rateLimited: true },
+      );
+    }
+
+    if (resp.status === 401 || resp.status === 403) {
+      throw createGithubFetchError(
+        `GitHub rejected the supplied token for ${safePath}`,
+        { status: resp.status, authRejected: true },
+      );
+    }
+
+    throw createGithubFetchError(
+      `GitHub returned ${resp.status} for ${safePath}`,
+      { status: resp.status },
+    );
+  }
+
+  return await resp.text();
 }
 
 export async function fetchGithubCommits(owner, repo, branch, count, token) {
