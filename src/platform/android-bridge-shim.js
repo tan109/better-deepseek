@@ -20,8 +20,15 @@
  *   downloadBlob(base64, mimeType, fileName): void
  *   reportTheme(isDark: Boolean): void  // live bar-icon colour update; persistence via setStorage
  *   pickFiles(mode: String, requestId: String): void
- *     // mode: "files" | "folder"; result delivered as
- *     // CustomEvent("__bds_native_files_picked_" + requestId)
+ *     // mode: "files" | "folder" | "files+images" | "folder+images";
+ *     // v2/v2.1 result delivered as a CustomEvent series:
+ *     // status detail { v:2, kind:"status", phase:"opened"|"reading" }
+ *     // chunk detail { v:2, kind:"chunk", seq, total, data } where data chunks
+ *     // a JSON payload string, max 200k chars per chunk. Payloads include
+ *     // { files:[{ name, content, encoding?, mime? }], folderName?, skipped:[] }
+ *     // or { error, files:[] }. encoding:"base64" marks image/binary payloads.
+ *     // Skip reasons include "image-requires-vision" and "image-cap-exceeded".
+ *     // Native error codes: "cancelled", "picker-launch-failed", "read-failed".
  */
 
 function getBridge() {

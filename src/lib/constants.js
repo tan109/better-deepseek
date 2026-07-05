@@ -794,6 +794,7 @@ export const DEFAULT_REMOTE_CONFIG = {
       expertMode: { show: true, showPlus: false, showUploadFile: false, showUploadFolder: false, showGithub: false, showWeb: false, showProject: true, showVoice: true },
       instantMode: { show: true, showPlus: true, showUploadFile: true, showUploadFolder: true, showGithub: true, showWeb: true, showProject: true, showVoice: true },
       deepthinkMode: { show: true, showPlus: true, showUploadFile: true, showUploadFolder: true, showGithub: true, showWeb: true, showProject: true, showVoice: true },
+      visionMode: { show: true, showPlus: true, showUploadFile: true, showUploadFolder: true, showGithub: true, showWeb: true, showProject: true, showVoice: true },
     },
     fileUpload: { enabled: true, expertModeBlocked: true, dataTransfer: true, nativeInput: true },
     codeBlocks: { runButtons: { python: true, javascript: true, typescript: true } },
@@ -882,6 +883,24 @@ export const DEFAULT_REMOTE_CONFIG = {
     previewPanel: "._519be07",
     renameInput: "input.ds-input__input",
     theme: { darkClass: "dark", lightClass: "light" },
+  },
+  // Model-type detection tables, kept data-driven (rather than hardcoded in
+  // detectModelType) so a DeepSeek DOM change can be corrected via remote
+  // config (modelDetection.attrMap / modelDetection.badgeRules overrides)
+  // without shipping a new extension version.
+  modelDetection: {
+    attrMap: { vision: "vision", expert: "expert", deepthink: "deepthink", instant: "instant", chat: "instant" },
+    badgeRules: [
+      ["vision", "vision"],
+      ["expert", "expert"],
+      ["deepseek-reasoner", "expert"],
+      ["deepthink", "deepthink"],
+      ["deep think", "deepthink"],
+      ["reasoner", "deepthink"],
+      ["r1", "deepthink"],
+      ["instant", "instant"],
+      ["deepseek-chat", "instant"],
+    ],
   },
   api: {
     chatCompletionPaths: ["/api/v0/chat/completion", "/api/v0/chat/edit_message"],

@@ -49,6 +49,7 @@ test-results/
 .claude
 AGENTS.md
 CLAUDE.md
+FABLE.md
 
 # Ignore local development files
 .vscode/

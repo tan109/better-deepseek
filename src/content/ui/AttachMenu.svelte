@@ -14,6 +14,8 @@
     buildFolderFileFromNative,
     isNativeFilePickerAvailable,
     nativePickFiles,
+    PICK_ERRORS,
+    pickedEntryToFile,
   } from "../../platform/android-file-picker.js";
   import {
     getFilesForProject,
@@ -29,9 +31,23 @@
   import { t } from "../../lib/i18n.svelte.js";
   import { getFlag, getConfig, REMOTE_CONFIG_EVENT, detectModelType } from "../../lib/remote-config.svelte.js";
   import { VADProcessor } from "../vad-processor.js";
+  import { findActiveFileInput } from "../scanner.js";
 
   // The native input[type="file"] reference passed from scanner
   let { nativeInput } = $props();
+
+  // Live-resolved native input. DeepSeek can replace its composer's file
+  // input node after the first successful upload (device layout re-renders);
+  // the original prop reference then points at a detached node. Every use
+  // site re-resolves through this instead of reading `nativeInput` directly.
+  let inputEl = $state(nativeInput);
+
+  function resolveNativeInput() {
+    if (inputEl?.isConnected) return inputEl;
+    const fresh = findActiveFileInput();
+    if (fresh) inputEl = fresh;
+    return fresh;
+  }
 
   let isOpen = $state(false);
   let menuRef;
@@ -94,12 +110,12 @@
 
   function detectModelTypeWithPricing() {
     const model = detectModelType();
-    if (model !== "instant") return model;
+    if (model) return model;
     const modelName = appState.pricing?.modelName || "";
     const lo = modelName.toLowerCase();
     if (lo.includes("pro") || lo.includes("reasoner") || lo === "expert") return "expert";
     if (lo.includes("deepthink")) return "deepthink";
-    return model;
+    return null;
   }
 
   let shouldShowAttach = $state(true);
@@ -114,7 +130,7 @@
   function updateVisibility() {
     try {
       const enabled = getFlag("features.attachMenu.enabled");
-      const modelKey = currentModelType === "expert" ? "expertMode" : currentModelType === "instant" ? "instantMode" : "deepthinkMode";
+      const modelKey = currentModelType === "vision" ? "visionMode" : currentModelType === "expert" ? "expertMode" : currentModelType === "instant" ? "instantMode" : "deepthinkMode";
       shouldShowAttach = !!(enabled && getFlag(`features.attachMenu.${modelKey}.show`));
       const show = shouldShowAttach;
       shouldShowPlus = show && !!getFlag(`features.attachMenu.${modelKey}.showPlus`);
@@ -132,29 +148,34 @@
   let modelObserver = $state(null);
 
   function recheckModelType() {
-    const prev = currentModelType;
-    currentModelType = detectModelTypeWithPricing();
-    if (currentModelType !== prev) updateVisibility();
+    const next = detectModelTypeWithPricing();
+    if (next && next !== currentModelType) {
+      currentModelType = next;
+      updateVisibility();
+    }
   }
 
   function startModelWatcher() {
-    const poll = () => {
-      const switcher = document.querySelector('[role="radiogroup"]');
-      if (switcher) {
+    // Observe document.body rather than the switcher node itself: DeepSeek
+    // can replace the whole switcher element (composer re-render, picker
+    // roundtrip), which would silently detach an observer scoped to it and
+    // freeze detection. A body-wide observer survives node replacement.
+    let rafId = 0;
+    const scheduleRecheck = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
         recheckModelType();
-        if (modelObserver) modelObserver.disconnect();
-        const obs = new MutationObserver(() => recheckModelType());
-        obs.observe(switcher, {
-          subtree: true,
-          attributes: true,
-          attributeFilter: ["aria-checked"],
-        });
-        modelObserver = obs;
-      } else {
-        requestAnimationFrame(poll);
-      }
+      });
     };
-    requestAnimationFrame(poll);
+    const obs = new MutationObserver(scheduleRecheck);
+    obs.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["aria-checked"],
+    });
+    modelObserver = obs;
   }
 
   function hasGithubToken() {
@@ -516,30 +537,61 @@
     }
   }
 
+  function pickErrorMessage(err, fallbackKey) {
+    const message = err?.message || "";
+    if (message === PICK_ERRORS.TIMEOUT || message === PICK_ERRORS.STALLED) {
+      return t("attachMenu.pickTimeout");
+    }
+    return message || t(fallbackKey);
+  }
+
+  function showNativePickSkips(skipped, attachedCount, emptyKey) {
+    if (!appState.ui) return;
+    if (skipped.some((item) => item.reason === "image-requires-vision")) {
+      appState.ui.showToast(t("attachMenu.imagesRequireVision"));
+      return;
+    }
+    if (attachedCount > 0 && skipped.length > 0) {
+      appState.ui.showToast(t("attachMenu.someFilesSkipped", {
+        skipped: skipped.length,
+        total: skipped.length + attachedCount,
+      }));
+      return;
+    }
+    if (attachedCount === 0) {
+      appState.ui.showToast(t(emptyKey));
+    }
+  }
+
   async function handleUploadFile() {
     closeMenu();
     if (isAndroidTarget && isNativeFilePickerAvailable()) {
       try {
-        const result = await nativePickFiles("files");
-        if (!result.cancelled && result.files && result.files.length > 0) {
-          for (const file of result.files) {
-            const blob = new Blob([file.content], { type: "text/plain" });
-            injectFile(new File([blob], file.name, { type: "text/plain" }));
+        const wantImages = currentModelType === "vision";
+        const result = await nativePickFiles(wantImages ? "files+images" : "files");
+        if (result.cancelled) return;
+        const files = result.files || [];
+        const skipped = result.skipped || [];
+        if (files.length > 0) {
+          for (const file of files) {
+            injectFile(pickedEntryToFile(file));
           }
         }
+        showNativePickSkips(skipped, files.length, "attachMenu.noFilesPicked");
       } catch (err) {
         if (appState.ui) {
-          appState.ui.showToast(err?.message || t('attachMenu.filePickFailed'));
+          appState.ui.showToast(pickErrorMessage(err, "attachMenu.filePickFailed"));
         }
       }
       return;
     }
 
-    if (nativeInput) {
+    const target = resolveNativeInput();
+    if (target) {
       // Native picker behavior is selected via a file-flow strategy. Android's
       // "Upload File" path prefers the single-file strategy so WebView asks the
       // platform chooser for one file even though DeepSeek's DOM input is `multiple`.
-      openNativeFilePicker(nativeInput, { preferSingle: isAndroidTarget });
+      openNativeFilePicker(target, { preferSingle: isAndroidTarget });
     }
   }
 
@@ -549,17 +601,26 @@
     if (isAndroidTarget) {
       if (isNativeFilePickerAvailable()) {
         try {
-          const result = await nativePickFiles("folder");
-          if (!result.cancelled && result.files && result.files.length > 0) {
+          const wantImages = currentModelType === "vision";
+          const result = await nativePickFiles(wantImages ? "folder+images" : "folder");
+          if (result.cancelled) return;
+          const files = result.files || [];
+          const skipped = result.skipped || [];
+          const images = files.filter((file) => file.encoding === "base64");
+          if (files.length > 0) {
             const fakeFile = buildFolderFileFromNative(
-              result.files,
+              files,
               result.folderName,
             );
             if (fakeFile) injectFile(fakeFile);
+            for (const image of images) {
+              injectFile(pickedEntryToFile(image));
+            }
           }
+          showNativePickSkips(skipped, files.length, "attachMenu.folderNoTextFiles");
         } catch (err) {
           if (appState.ui) {
-            appState.ui.showToast(err?.message || t('attachMenu.folderPickFailed'));
+            appState.ui.showToast(pickErrorMessage(err, "attachMenu.folderPickFailed"));
           }
         }
       } else if (appState.ui) {
@@ -568,12 +629,23 @@
       return;
     }
 
-    if (!nativeInput) return;
+    if (!resolveNativeInput()) return;
 
     try {
-      const fakeFile = await pickFolderAndConcatenate();
-      if (fakeFile) {
-        injectFile(fakeFile);
+      const result = await pickFolderAndConcatenate({
+        includeImages: currentModelType === "vision",
+      });
+      if (result?.workspaceFile) {
+        injectFile(result.workspaceFile);
+      }
+      for (const imageFile of result?.imageFiles || []) {
+        injectFile(imageFile);
+      }
+      if (result?.skippedImages > 0 && appState.ui) {
+        appState.ui.showToast(t("attachMenu.someFilesSkipped", {
+          skipped: result.skippedImages,
+          total: result.skippedImages + (result.imageFiles?.length || 0),
+        }));
       }
     } catch (err) {
       if (err?.name === "AbortError") {
@@ -709,16 +781,20 @@
   }
 
   function injectFile(file) {
-    if (!nativeInput) return;
+    const target = resolveNativeInput();
+    if (!target) {
+      if (appState.ui) appState.ui.showToast(t('attachMenu.noInputField'));
+      return;
+    }
     const dt = new DataTransfer();
-    if (nativeInput.files) {
-      for (let i = 0; i < nativeInput.files.length; i++) {
-        dt.items.add(nativeInput.files[i]);
+    if (target.files) {
+      for (let i = 0; i < target.files.length; i++) {
+        dt.items.add(target.files[i]);
       }
     }
     dt.items.add(file);
-    nativeInput.files = dt.files;
-    nativeInput.dispatchEvent(new Event("change", { bubbles: true }));
+    target.files = dt.files;
+    target.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   function formatSize(bytes) {
@@ -787,7 +863,7 @@
   }
 
   function attachPanelFiles() {
-    if (!nativeInput || !panelTickedIds.length) return;
+    if (!resolveNativeInput() || !panelTickedIds.length) return;
     const activeFiles = panelFiles.filter((f) => panelTickedIds.includes(f.id));
     if (!activeFiles.length) return;
     const activeProject = panelProjects.find(

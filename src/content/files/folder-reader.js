@@ -7,7 +7,11 @@
 import { pickFolderSelection } from "../../lib/utils/folder-picker.js";
 import appState from "../state.js";
 
-export async function pickFolderAndConcatenate() {
+const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
+const MAX_FOLDER_IMAGES = 10;
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp"]);
+
+export async function pickFolderAndConcatenate(options = {}) {
   const selection = await pickFolderSelection({
     processGitignore: Boolean(appState.settings.processGitignoreOnUpload),
   });
@@ -17,6 +21,23 @@ export async function pickFolderAndConcatenate() {
 
   const allFiles = selection.files.slice();
   allFiles.sort((a, b) => a.path.localeCompare(b.path));
+
+  const imageFiles = [];
+  let skippedImages = 0;
+  if (options.includeImages) {
+    for (const file of allFiles) {
+      if (!isImageFile(file.name)) continue;
+      if (file.size > MAX_IMAGE_SIZE) {
+        skippedImages += 1;
+        continue;
+      }
+      if (imageFiles.length >= MAX_FOLDER_IMAGES) {
+        skippedImages += 1;
+        continue;
+      }
+      imageFiles.push(file);
+    }
+  }
 
   // Add file tree at the top
   let concatText = generateTree(allFiles);
@@ -47,13 +68,14 @@ export async function pickFolderAndConcatenate() {
     }
   }
 
-  if (!textFileCount) {
-    return null;
-  }
-
-  const blob = new Blob([concatText], { type: "text/plain" });
-  const workspaceName = `${selection.rootName || "folder"}_workspace.txt`;
-  return new File([blob], workspaceName, { type: "text/plain" });
+  const workspaceFile = textFileCount
+    ? new File(
+        [new Blob([concatText], { type: "text/plain" })],
+        `${selection.rootName || "folder"}_workspace.txt`,
+        { type: "text/plain" },
+      )
+    : null;
+  return { workspaceFile, imageFiles, skippedImages };
 }
 
 function generateTree(allFiles) {
@@ -107,4 +129,9 @@ function isTextFile(filename) {
     "cs", "csproj", "sln", "fs", "fsproj", "razor", "swift", "kt", "dart"
   ];
   return textExts.includes(ext);
+}
+
+function isImageFile(filename) {
+  const ext = filename.split(".").pop().toLowerCase();
+  return IMAGE_EXTENSIONS.has(ext);
 }

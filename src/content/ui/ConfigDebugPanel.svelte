@@ -11,9 +11,15 @@
   function show() { visible = true; }
   function hide() { visible = false; }
   function toggle() { visible = !visible; }
+  function attachMenuModelKey(model) {
+    if (model === "vision") return "visionMode";
+    if (model === "expert") return "expertMode";
+    if (model === "deepthink") return "deepthinkMode";
+    return "instantMode";
+  }
 
   function refresh() {
-    currentModel = detectModelType();
+    currentModel = detectModelType() || "unknown";
     configSnapshot = remoteConfig.raw;
   }
 
@@ -68,6 +74,7 @@
   function modelBadgeClass(m) {
     if (m === "expert") return "bds-cdbadge bds-cdbadge--expert";
     if (m === "deepthink") return "bds-cdbadge bds-cdbadge--deepthink";
+    if (m === "unknown") return "bds-cdbadge bds-cdbadge--unknown";
     return "bds-cdbadge bds-cdbadge--instant";
   }
 
@@ -189,9 +196,9 @@
               <label class="bds-cdtoggle">
                 <input
                   type="checkbox"
-                  checked={getEffective(currentModel === "expert" ? "features.attachMenu.expertMode." + flag : currentModel === "deepthink" ? "features.attachMenu.deepthinkMode." + flag : "features.attachMenu.instantMode." + flag)}
+                  checked={getEffective("features.attachMenu." + attachMenuModelKey(currentModel) + "." + flag)}
                   onchange={(e) => {
-                    const p = "features.attachMenu." + (currentModel === "expert" ? "expertMode" : currentModel === "deepthink" ? "deepthinkMode" : "instantMode") + "." + flag;
+                    const p = "features.attachMenu." + attachMenuModelKey(currentModel) + "." + flag;
                     setBool(p, e.target.checked);
                   }}
                 />
@@ -319,6 +326,7 @@
   .bds-cdbadge--instant { background: #1a3a2e; color: #4ade80; }
   .bds-cdbadge--expert { background: #3a1a2e; color: #f87171; }
   .bds-cdbadge--deepthink { background: #2a1a4e; color: #a78bfa; }
+  .bds-cdbadge--unknown { background: #2a2a2a; color: #9ca3af; }
 
   .bds-cdpanel-tabs {
     display: flex;

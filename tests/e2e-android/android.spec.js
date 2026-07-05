@@ -142,6 +142,72 @@ test("Upload File on Android uses native picker bridge and injects markdown", as
   expect(await page.evaluate(() => window.__mockDeepSeek.uploadInputClickedDirectly)).toBe(false);
 });
 
+test("upload works twice across a composer re-render on Android", async ({ page }) => {
+  await page.evaluate(() => {
+    window.__bdsNativeFilePicker = () => ({
+      files: [{ name: "android-notes.md", content: "# Android notes" }],
+    });
+  });
+
+  await page.locator(".bds-plus-btn").click({ force: true });
+  await page
+    .locator(".bds-attach-dropdown .bds-attach-item")
+    .filter({ hasText: "Upload File" })
+    .click({ force: true });
+
+  await expect
+    .poll(() => page.evaluate(() => window.__mockDeepSeek.getAttachedFiles()))
+    .toEqual(["android-notes.md"]);
+
+  // DeepSeek swaps in a brand-new (empty) input node on re-render — the
+  // previous node's files become unreachable once detached. What matters is
+  // that the second attach lands on the input that is now actually live in
+  // the DOM, not silently on the stale detached one.
+  await page.evaluate(() => window.__mockDeepSeek.replaceFileInput());
+
+  await page.locator(".bds-plus-btn").click({ force: true });
+  await page
+    .locator(".bds-attach-dropdown .bds-attach-item")
+    .filter({ hasText: "Upload File" })
+    .click({ force: true });
+
+  await expect
+    .poll(() => page.evaluate(() => window.__mockDeepSeek.getAttachedFiles()))
+    .toEqual(["android-notes.md"]);
+});
+
+test("Upload File on Android requests images in Vision mode", async ({ page }) => {
+  await page.evaluate(() => {
+    const switcher = document.createElement("div");
+    switcher.setAttribute("role", "radiogroup");
+    switcher.innerHTML = `
+      <div role="radio" data-model-type="instant" aria-checked="false">Instant</div>
+      <div role="radio" data-model-type="vision" aria-checked="true">Vision</div>
+    `;
+    document.body.appendChild(switcher);
+    window.__bdsNativeFilePicker = (mode) => {
+      window.__mockDeepSeek.nativeVisionUploadFileMode = mode;
+      return {
+        files: [{ name: "photo.png", content: "AQID", encoding: "base64", mime: "image/png" }],
+      };
+    };
+  });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+  await page.locator(".bds-plus-btn").click({ force: true });
+  await page
+    .locator(".bds-attach-dropdown .bds-attach-item")
+    .filter({ hasText: "Upload File" })
+    .click({ force: true });
+
+  await expect
+    .poll(() => page.evaluate(() => window.__mockDeepSeek.nativeVisionUploadFileMode))
+    .toBe("files+images");
+  await expect
+    .poll(() => page.evaluate(() => window.__mockDeepSeek.getAttachedFiles()))
+    .toContain("photo.png");
+});
+
 test("Upload Folder on Android uses native picker bridge and injects workspace", async ({ page }) => {
   await page.evaluate(() => {
     window.__bdsNativeFilePicker = (mode) => {
@@ -168,6 +234,46 @@ test("Upload Folder on Android uses native picker bridge and injects workspace",
   await expect
     .poll(() => page.evaluate(() => window.__mockDeepSeek.nativeUploadFolderMode))
     .toBe("folder");
+});
+
+test("reassembles multi-chunk native folder payloads", async ({ page }) => {
+  await page.evaluate(() => {
+    window.__bdsPickChunkSize = 64;
+    window.__bdsNativeFilePicker = () => ({
+      files: [{ name: "src/big.js", content: "x".repeat(5000) }],
+      folderName: "repo",
+      skipped: [],
+    });
+  });
+
+  await page.locator(".bds-plus-btn").click({ force: true });
+  await page
+    .locator(".bds-attach-dropdown .bds-attach-item")
+    .filter({ hasText: "Upload Folder" })
+    .click({ force: true });
+
+  await expect
+    .poll(() => page.evaluate(() => window.__mockDeepSeek.getAttachedFiles()))
+    .toContain("repo_workspace.txt");
+});
+
+test("shows a toast when the native picker returns only skipped files", async ({ page }) => {
+  await page.evaluate(() => {
+    window.__bdsNativeFilePicker = () => ({
+      files: [],
+      skipped: [{ name: "photo.png", reason: "unsupported-type" }],
+    });
+  });
+
+  await page.locator(".bds-plus-btn").click({ force: true });
+  await page
+    .locator(".bds-attach-dropdown .bds-attach-item")
+    .filter({ hasText: "Upload File" })
+    .click({ force: true });
+
+  await expect(page.locator("#bds-toast-stack .bds-toast")).toContainText(
+    "Nothing was attached",
+  );
 });
 
 test("drawer import inputs stay single-file on Android", async ({ page }) => {
