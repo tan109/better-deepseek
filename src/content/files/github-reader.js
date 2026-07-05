@@ -102,7 +102,7 @@ export function parseGitHubUrl(input) {
       filePath = parts.slice(4).join("/");
     }
 
-    return { owner, repo, branch, filePath };
+    return filePath ? { owner, repo, branch, filePath } : { owner, repo, branch };
   } catch {
     return null;
   }
