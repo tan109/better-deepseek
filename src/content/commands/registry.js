@@ -83,7 +83,6 @@ export const COMMANDS = [
     validateArgs(args) { return args[0] ? null : "Usage: /github <owner/repo, repo URL, or file blob URL>" },
   },
   {
-  {
     id: "curl",
     aliases: [],
     name: "cURL",
@@ -97,6 +96,7 @@ export const COMMANDS = [
     minArgs: 1,
     validateArgs(args) { return args[0] ? null : "Usage: /curl <url>"; },
   },
+  {
     id: "help",
     aliases: ["?"],
     name: "Help",
