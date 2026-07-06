@@ -22,12 +22,6 @@ android {
     }
 
     buildTypes {
-        debug {
-            isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
-            signingConfig = signingConfigs.getByName("debugStable")
-        }
         signingConfigs {
             create("debugStable") {
                 storeFile = rootProject.file("debug.keystore")
@@ -41,6 +35,12 @@ android {
                 keyAlias = System.getenv("BDS_KEY_ALIAS") ?: ""
                 keyPassword = System.getenv("BDS_KEY_PASSWORD") ?: ""
             }
+        }
+        debug {
+            isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debugStable")
         }
         release {
             signingConfig = signingConfigs.getByName("release")
