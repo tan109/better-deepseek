@@ -941,12 +941,12 @@ class WebViewBridge(
             "POST" -> {
                 val mediaType = "application/json; charset=utf-8"
                 val bodyBytes = body.toByteArray(Charsets.UTF_8)
-                requestBuilder.post(okhttp3.RequestBody.create(mediaType, bodyBytes))
+                requestBuilder.post(okhttp3.RequestBody.create(okhttp3.MediaType.parse(mediaType), bodyBytes))
             }
             "PUT" -> {
                 val mediaType = "application/json; charset=utf-8"
                 val bodyBytes = body.toByteArray(Charsets.UTF_8)
-                requestBuilder.put(okhttp3.RequestBody.create(mediaType, bodyBytes))
+                requestBuilder.put(okhttp3.RequestBody.create(okhttp3.MediaType.parse(mediaType), bodyBytes))
             }
             "DELETE" -> requestBuilder.delete()
             else -> requestBuilder.method(method, null)
