@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
@@ -939,14 +940,12 @@ class WebViewBridge(
         when (method.uppercase()) {
             "GET" -> requestBuilder.get()
             "POST" -> {
-                val mediaType = "application/json; charset=utf-8"
-                val bodyBytes = body.toByteArray(Charsets.UTF_8)
-                requestBuilder.post(okhttp3.RequestBody.create(mediaType.toMediaType(), bodyBytes))
+                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                requestBuilder.post(okhttp3.RequestBody.create(mediaType, body))
             }
             "PUT" -> {
-                val mediaType = "application/json; charset=utf-8"
-                val bodyBytes = body.toByteArray(Charsets.UTF_8)
-                requestBuilder.put(okhttp3.RequestBody.create(mediaType.toMediaType(), bodyBytes))
+                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                requestBuilder.put(okhttp3.RequestBody.create(mediaType, body))
             }
             "DELETE" -> requestBuilder.delete()
             else -> requestBuilder.method(method, null)
