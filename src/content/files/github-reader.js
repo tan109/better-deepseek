@@ -36,6 +36,14 @@ const BINARY_EXTS = new Set([
   "DS_Store",
 ]);
 
+/**
+ * Max total size (chars) of the concatenated output, to avoid filling
+ * the entire context window on large repos. ~4 chars/token is a common
+ * rough estimate, so this budgets roughly 100K tokens of file content.
+ * Override via options.maxOutputChars.
+ */
+const DEFAULT_MAX_OUTPUT_CHARS = 400_000;
+
 /** Text extensions we actively want to include */
 const TEXT_EXTS = new Set([
   "js", "ts", "jsx", "tsx", "mjs", "cjs",
@@ -330,7 +338,7 @@ export async function fetchGitHubRepo(repoUrl, onStatus = () => { }, options = {
     const isKnownText = TEXT_EXTS.has(ext) || TEXT_EXTS.has(fileName.toLowerCase());
     if (!isKnownText && ext) continue;
 
-    validEntries.push({ fullPath, relativePath });
+    validEntries.push({ fullPath, relativePath, byteLength: files[fullPath].length });
   }
 
   // Sort for deterministic output
@@ -343,8 +351,38 @@ export async function fetchGitHubRepo(repoUrl, onStatus = () => { }, options = {
   output += buildTree(validEntries.map((e) => e.relativePath));
   output += `\n${"=".repeat(48)}\n`;
 
-  // Concatenate file contents
+  const maxOutputChars =
+    typeof options.maxOutputChars === "number" && options.maxOutputChars > 0
+      ? options.maxOutputChars
+      : DEFAULT_MAX_OUTPUT_CHARS;
+
+  // Prioritize smaller files first so a repo with many small files gets
+  // more of them included, rather than one huge file eating the budget.
+  const byBudgetPriority = [...validEntries].sort((a, b) => a.byteLength - b.byteLength);
+
+  let runningLength = output.length;
+  const included = new Set();
+  const omitted = [];
+
+  for (const entry of byBudgetPriority) {
+    const estimatedAddition = entry.byteLength + entry.relativePath.length + 200;
+    if (runningLength + estimatedAddition > maxOutputChars) {
+      omitted.push(entry.relativePath);
+      continue;
+    }
+    included.add(entry.fullPath);
+    runningLength += estimatedAddition;
+  }
+
+  onStatus(
+    omitted.length
+      ? `Building context (${included.size} files included, ${omitted.length} omitted due to size)...`
+      : "Building context..."
+  );
+
+  // Concatenate file contents (only those that fit the budget)
   for (const { fullPath, relativePath } of validEntries) {
+    if (!included.has(fullPath)) continue;
     try {
       const content = strFromU8(files[fullPath]);
       // Skip if it contains null bytes (binary disguised as text)
@@ -356,6 +394,18 @@ export async function fetchGitHubRepo(repoUrl, onStatus = () => { }, options = {
       output += `<file_content>\n${content}\n</file_content>\n`;
     } catch {
       // encoding error, skip
+    }
+  }
+
+  if (omitted.length) {
+    output += `\n${"=".repeat(48)}\n`;
+    output += `NOTE: Output truncated at ~${maxOutputChars.toLocaleString()} characters to avoid overflowing the context window.\n`;
+    output += `${omitted.length} file(s) omitted (content not included, but listed in the tree above):\n`;
+    for (const p of omitted.slice(0, 200)) {
+      output += `  - ${p}\n`;
+    }
+    if (omitted.length > 200) {
+      output += `  ... and ${omitted.length - 200} more\n`;
     }
   }
 
