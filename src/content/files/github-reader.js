@@ -38,11 +38,15 @@ const BINARY_EXTS = new Set([
 
 /**
  * Max total size (chars) of the concatenated output, to avoid filling
- * the entire context window on large repos. ~4 chars/token is a common
- * rough estimate, so this budgets roughly 100K tokens of file content.
+ * the entire context window on large repos. DeepSeek's web-chat context
+ * window is 128,000 tokens total (see context-budget.js), shared across
+ * system prompt, chat history, this message, and the attachment itself --
+ * so the GitHub content alone should only claim a modest slice of that,
+ * not the whole budget. At this app's own CHARS_PER_TOKEN (3.5), 140,000
+ * chars is roughly 40,000 tokens, leaving ~88,000 tokens of headroom.
  * Override via options.maxOutputChars.
  */
-const DEFAULT_MAX_OUTPUT_CHARS = 400_000;
+const DEFAULT_MAX_OUTPUT_CHARS = 140_000;
 
 /** Text extensions we actively want to include */
 const TEXT_EXTS = new Set([
