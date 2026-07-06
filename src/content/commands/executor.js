@@ -88,33 +88,6 @@ async function executeBuiltin(cmd, args, rawArgs) {
         }
         break
       }
-      case "curl": {
-        const url = (rawArgs || args[0] || "").trim();
-        if (!url) {
-          if (state.ui) state.ui.showToast("Usage: /curl <url>");
-          break;
-        }
-        try {
-          const resp = await window.BDSBridge?.postMessage({
-            type: "bds-curl",
-            url,
-            method: "GET",
-            headers: {},
-            body: ""
-          });
-          if (resp?.ok) {
-            await injectPureTextAndSend(
-              resp.text || JSON.stringify(resp, null, 2),
-              `/curl ${url}`
-            );
-          } else {
-            if (state.ui) state.ui.showToast(`cURL failed: ${resp?.error || "HTTP " + resp?.status}`);
-          }
-        } catch (err) {
-          if (state.ui) state.ui.showToast(`cURL error: ${err.message}`);
-        }
-        break;
-      }
       case "help":
         window.dispatchEvent(new CustomEvent("bds:show-help"))
         break
