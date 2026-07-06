@@ -725,6 +725,7 @@ class WebViewBridge(
                 "bds-fetch-github-zip" -> handleFetchGithubZip(payload, response)
                 "bds-fetch-github-commits" -> handleFetchGithubCommits(payload, response)
                 "bds-fetch-github-file" -> handleFetchGithubFile(payload, response)
+                "bds-curl" -> handleCurl(payload, response)
                 "bds-get-youtube-transcript" -> {
                     response.put("ok", false)
                     response.put(
@@ -917,6 +918,61 @@ class WebViewBridge(
                 return
             }
             encodeZipToResponse(resp, url, response)
+        }
+    }
+
+    private fun handleCurl(payload: JSONObject, response: JSONObject) {
+        val url = payload.optString("url").trim()
+        val method = payload.optString("method").trim().ifEmpty { "GET" }
+        val headers = payload.optJSONObject("headers")
+        val body = payload.optString("body").trim()
+
+        if (url.isEmpty()) {
+            response.put("ok", false)
+            response.put("error", "Missing URL.")
+            return
+        }
+
+        val requestBuilder = Request.Builder().url(url)
+
+        // Set HTTP method
+        when (method.uppercase()) {
+            "GET" -> requestBuilder.get()
+            "POST" -> {
+                val mediaType = "application/json; charset=utf-8"
+                val bodyBytes = body.toByteArray(Charsets.UTF_8)
+                requestBuilder.post(okhttp3.RequestBody.create(mediaType, bodyBytes))
+            }
+            "PUT" -> {
+                val mediaType = "application/json; charset=utf-8"
+                val bodyBytes = body.toByteArray(Charsets.UTF_8)
+                requestBuilder.put(okhttp3.RequestBody.create(mediaType, bodyBytes))
+            }
+            "DELETE" -> requestBuilder.delete()
+            else -> requestBuilder.method(method, null)
+        }
+
+        // Attach custom headers
+        if (headers != null) {
+            val keys = headers.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                requestBuilder.header(key, headers.optString(key))
+            }
+        }
+
+        httpClient.newCall(requestBuilder.build()).execute().use { resp ->
+            response.put("ok", resp.isSuccessful)
+            response.put("status", resp.code)
+            response.put("statusText", resp.message)
+            response.put("text", resp.body?.string() ?: "")
+
+            // Echo back response headers as a JSON object
+            val respHeaders = JSONObject()
+            resp.headers.forEach { (name, value) ->
+                respHeaders.put(name, value)
+            }
+            response.put("headers", respHeaders)
         }
     }
 
