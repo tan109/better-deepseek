@@ -26,8 +26,15 @@ android {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debugStable")
         }
         signingConfigs {
+            create("debugStable") {
+                storeFile = rootProject.file("debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
             create("release") {
                 storeFile = rootProject.file("ci-release.jks")
                 storePassword = System.getenv("BDS_KEYSTORE_PASSWORD") ?: ""
