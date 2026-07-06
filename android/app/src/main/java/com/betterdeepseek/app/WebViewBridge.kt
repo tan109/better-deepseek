@@ -724,6 +724,7 @@ class WebViewBridge(
                 "bds-fetch-url" -> handleFetchUrl(payload, response)
                 "bds-fetch-github-zip" -> handleFetchGithubZip(payload, response)
                 "bds-fetch-github-commits" -> handleFetchGithubCommits(payload, response)
+                "bds-fetch-github-file" -> handleFetchGithubFile(payload, response)
                 "bds-get-youtube-transcript" -> {
                     response.put("ok", false)
                     response.put(
@@ -916,6 +917,69 @@ class WebViewBridge(
                 return
             }
             encodeZipToResponse(resp, url, response)
+        }
+    }
+
+    private fun handleFetchGithubFile(payload: JSONObject, response: JSONObject) {
+        val owner = payload.optString("owner").trim()
+        val repo = payload.optString("repo").trim()
+        val path = payload.optString("path").trim()
+        val branch = payload.optString("branch").trim().ifEmpty { "main" }
+        val token = payload.optString("token").trim()
+
+        if (owner.isEmpty() || repo.isEmpty() || path.isEmpty()) {
+            response.put("ok", false)
+            response.put("error", "Missing owner, repo, or file path.")
+            return
+        }
+
+        val encodedPath = Uri.encode(path, "/")
+        val encodedBranch = Uri.encode(branch)
+        val url = "$githubApiBaseUrl/repos/$owner/$repo/contents/$encodedPath?ref=$encodedBranch"
+
+        val requestBuilder =
+                Request.Builder()
+                        .url(url)
+                        .header("Accept", "application/vnd.github.raw")
+
+        if (token.isNotEmpty()) {
+            requestBuilder.header("Authorization", "token $token")
+        }
+
+        httpClient.newCall(requestBuilder.build()).execute().use { resp ->
+            if (!resp.isSuccessful) {
+                val bodyText = resp.body?.string() ?: ""
+
+                if (isGithubRateLimitResponse(resp.code, resp.header("X-RateLimit-Remaining"), bodyText)) {
+                    putGithubError(
+                            response,
+                            "GitHub API rate limit exceeded fetching $path",
+                            resp.code,
+                            rateLimited = true,
+                    )
+                    return
+                }
+
+                if (resp.code == 401 || resp.code == 403) {
+                    putGithubError(
+                            response,
+                            "GitHub rejected the supplied token for $path",
+                            resp.code,
+                            authRejected = true,
+                    )
+                    return
+                }
+
+                putGithubError(
+                        response,
+                        "GitHub returned ${resp.code} for $path",
+                        resp.code,
+                )
+                return
+            }
+
+            response.put("ok", true)
+            response.put("text", resp.body?.string() ?: "")
         }
     }
 
