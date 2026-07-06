@@ -1,7 +1,9 @@
 import { findCommand } from "./registry.js"
 import { parseCommandInput } from "./parser.js"
 import { searchWeb } from "../files/search-reader.js"
-import { injectPureTextAndSend, readFileText } from "../auto.js"
+import { injectPureTextAndSend, readFileText, sendFileWithMessage } from "../auto.js"
+import { fetchGitHubRepo } from "../files/github-reader.js"
+import appState from "../state.js"
 import { exportSession } from "../tools/exporter.js"
 import { performCompress, performSummarize } from "./context-handoff.js"
 import state from "../state.js"
@@ -69,6 +71,23 @@ async function executeBuiltin(cmd, args, rawArgs) {
       case "export":
         await exportSession(args[0].toLowerCase())
         break
+      case "github": {
+        const token = String(appState.settings.githubToken || "").trim()
+        const repoArg = rawArgs || args.join(" ")
+        try {
+          const file = await fetchGitHubRepo(repoArg, () => {}, { token })
+          if (file) {
+            await sendFileWithMessage(
+              file,
+              `<BetterDeepSeek>\n[BDS:AUTO] GitHub Fetch Result for: ${repoArg}\n</BetterDeepSeek>`,
+              "GitHub command fetch"
+            )
+          }
+        } catch (err) {
+          if (state.ui) state.ui.showToast(`GitHub fetch failed: ${err.message}`)
+        }
+        break
+      }
       case "help":
         window.dispatchEvent(new CustomEvent("bds:show-help"))
         break
