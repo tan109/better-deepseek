@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
@@ -726,7 +725,6 @@ class WebViewBridge(
                 "bds-fetch-github-zip" -> handleFetchGithubZip(payload, response)
                 "bds-fetch-github-commits" -> handleFetchGithubCommits(payload, response)
                 "bds-fetch-github-file" -> handleFetchGithubFile(payload, response)
-                "bds-curl" -> handleCurl(payload, response)
                 "bds-get-youtube-transcript" -> {
                     response.put("ok", false)
                     response.put(
@@ -922,59 +920,7 @@ class WebViewBridge(
         }
     }
 
-    private fun handleCurl(payload: JSONObject, response: JSONObject) {
-        val url = payload.optString("url").trim()
-        val method = payload.optString("method").trim().ifEmpty { "GET" }
-        val headers = payload.optJSONObject("headers")
-        val body = payload.optString("body").trim()
-
-        if (url.isEmpty()) {
-            response.put("ok", false)
-            response.put("error", "Missing URL.")
-            return
-        }
-
-        val requestBuilder = Request.Builder().url(url)
-
-        // Attach custom headers
-        if (headers != null) {
-            val keys = headers.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                requestBuilder.header(key, headers.optString(key))
-            }
-        }
-
-        // Set method and body
-        when (method.uppercase()) {
-            "GET" -> requestBuilder.get()
-            "DELETE" -> requestBuilder.delete()
-            "POST", "PUT", "PATCH" -> {
-                val requestBody = body.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-                when (method.uppercase()) {
-                    "POST" -> requestBuilder.post(requestBody)
-                    "PUT" -> requestBuilder.put(requestBody)
-                    "PATCH" -> requestBuilder.patch(requestBody)
-                }
-            }
-            else -> {}
-        }
-
-        httpClient.newCall(requestBuilder.build()).execute().use { resp ->
-            response.put("ok", resp.isSuccessful)
-            response.put("status", resp.code)
-            response.put("statusText", resp.message)
-            response.put("text", resp.body?.string() ?: "")
-
-            val respHeaders = JSONObject()
-            resp.headers.forEach { (name, value) ->
-                respHeaders.put(name, value)
-            }
-            response.put("headers", respHeaders)
-        }
-    }
-
-private fun handleFetchGithubFile(payload: JSONObject, response: JSONObject) {
+    private fun handleFetchGithubFile(payload: JSONObject, response: JSONObject) {
         val owner = payload.optString("owner").trim()
         val repo = payload.optString("repo").trim()
         val path = payload.optString("path").trim()
