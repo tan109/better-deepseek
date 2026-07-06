@@ -936,21 +936,6 @@ class WebViewBridge(
 
         val requestBuilder = Request.Builder().url(url)
 
-        // Set HTTP method
-        when (method.uppercase()) {
-            "GET" -> requestBuilder.get()
-            "POST" -> {
-                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-                requestBuilder.post(okhttp3.RequestBody.create(mediaType, body))
-            }
-            "PUT" -> {
-                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-                requestBuilder.put(okhttp3.RequestBody.create(mediaType, body))
-            }
-            "DELETE" -> requestBuilder.delete()
-            else -> requestBuilder.method(method, null)
-        }
-
         // Attach custom headers
         if (headers != null) {
             val keys = headers.keys()
@@ -960,13 +945,27 @@ class WebViewBridge(
             }
         }
 
+        // Set method and body
+        when (method.uppercase()) {
+            "GET" -> requestBuilder.get()
+            "DELETE" -> requestBuilder.delete()
+            "POST", "PUT", "PATCH" -> {
+                val requestBody = body.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+                when (method.uppercase()) {
+                    "POST" -> requestBuilder.post(requestBody)
+                    "PUT" -> requestBuilder.put(requestBody)
+                    "PATCH" -> requestBuilder.patch(requestBody)
+                }
+            }
+            else -> {}
+        }
+
         httpClient.newCall(requestBuilder.build()).execute().use { resp ->
             response.put("ok", resp.isSuccessful)
             response.put("status", resp.code)
             response.put("statusText", resp.message)
             response.put("text", resp.body?.string() ?: "")
 
-            // Echo back response headers as a JSON object
             val respHeaders = JSONObject()
             resp.headers.forEach { (name, value) ->
                 respHeaders.put(name, value)
@@ -975,7 +974,7 @@ class WebViewBridge(
         }
     }
 
-    private fun handleFetchGithubFile(payload: JSONObject, response: JSONObject) {
+private fun handleFetchGithubFile(payload: JSONObject, response: JSONObject) {
         val owner = payload.optString("owner").trim()
         val repo = payload.optString("repo").trim()
         val path = payload.optString("path").trim()
