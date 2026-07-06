@@ -71,6 +71,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "bds-run-termux-command") {
+    // Browser-extension build: arbitrary shell execution has no meaningful
+    // equivalent here (no native Android bridge, no Termux). Return a
+    // structured error so termux-runner.js sees !ok and surfaces it
+    // immediately without waiting for a pending CustomEvent that would
+    // never arrive on this platform.
+    sendResponse({
+      ok: false,
+      error: "Termux integration is Android-only.",
+    });
+    return false;
+  }
+
   if (message.type === "bds-fetch-github-commits") {
     fetchGithubCommits(
       message.owner,

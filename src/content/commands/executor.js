@@ -3,6 +3,7 @@ import { parseCommandInput } from "./parser.js"
 import { searchWeb } from "../files/search-reader.js"
 import { injectPureTextAndSend, readFileText, sendFileWithMessage } from "../auto.js"
 import { fetchGitHubRepo } from "../files/github-reader.js"
+import { runTermuxCommand, formatTermuxResult } from "../files/termux-runner.js"
 import appState from "../state.js"
 import { exportSession } from "../tools/exporter.js"
 import { performCompress, performSummarize } from "./context-handoff.js"
@@ -85,6 +86,29 @@ async function executeBuiltin(cmd, args, rawArgs) {
           }
         } catch (err) {
           if (state.ui) state.ui.showToast(`GitHub fetch failed: ${err.message}`)
+        }
+        break
+      }
+      case "termux": {
+        // SECURITY: this case is reachable ONLY from the user typing
+        // "/termux ..." into the chat input via tryExecuteRawInput. There
+        // is no <BDS:AUTO:...> tag and no AI-output path that reaches here.
+        const command = args[0]
+        const cmdArgs = args.slice(1)
+        try {
+          const result = await runTermuxCommand(command, cmdArgs)
+          const text = formatTermuxResult(command, cmdArgs, result)
+          await injectPureTextAndSend(
+            text,
+            `/termux ${command} ${cmdArgs.join(" ")}`.trim()
+          )
+          if (!result.ok && state.ui) {
+            state.ui.showToast(`Termux command failed: ${result.error || "see chat"}`)
+          } else if (result.ok && result.exitCode !== 0 && state.ui) {
+            state.ui.showToast(`Termux exit code ${result.exitCode}`)
+          }
+        } catch (err) {
+          if (state.ui) state.ui.showToast(`Termux: ${err.message}`)
         }
         break
       }
