@@ -791,22 +791,57 @@ class MainActivity : ComponentActivity() {
             "/data/data/com.termux/files/usr/bin/$command"
         }
 
+        // Real Termux RUN_COMMAND contract (verified against termux/termux-app
+        // wiki + source): the request goes to the MAIN Termux app
+        // (com.termux / com.termux.app.RunCommandService), NOT com.termux.api.
+        // Extra keys are flat "com.termux.RUN_COMMAND_*" strings, not
+        // "com.termux.api.extra.*". The result arrives wrapped in a single
+        // Bundle under EXTRA_PLUGIN_RESULT_BUNDLE, not as flat intent extras.
+        // The exact EXTRA_PENDING_INTENT / EXTRA_PLUGIN_RESULT_BUNDLE* key
+        // strings are reconstructed from the documented naming pattern
+        // (TermuxConstants-style "com.termux.<CLASS>.<CONST_NAME>") since we
+        // could not extract them directly from the installed APK on this
+        // device (no root / pm access). If results never arrive despite the
+        // command visibly running, these are the first constants to verify.
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: android.content.Context?, intent: Intent?) {
                 runCatching { unregisterReceiver(this) }
                 synchronized(termuxReceivers) { termuxReceivers.remove(requestId) }
 
-                val stdout = intent?.getStringExtra("com.termux.api.extra.STDOUT") ?: ""
-                val stderr = intent?.getStringExtra("com.termux.api.extra.STDERR") ?: ""
-                val exitCode = intent?.getIntExtra("com.termux.api.extra.EXIT_CODE", -1)
-                val err = intent?.getIntExtra("com.termux.api.extra.ERR", 0) ?: 0
-                val errmsg = intent?.getStringExtra("com.termux.api.extra.ERRMSG")
+                val resultBundle = intent?.getBundleExtra(
+                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE"
+                )
+
+                if (resultBundle == null) {
+                    bridge.deliverTermuxResult(
+                        requestId, ok = false, stdout = "", stderr = "", exitCode = null,
+                        error = "Termux sent a result callback but no result bundle was found " +
+                            "(EXTRA_PLUGIN_RESULT_BUNDLE key may differ from expected)."
+                    )
+                    return
+                }
+
+                val stdout = resultBundle.getString(
+                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_STDOUT"
+                ) ?: ""
+                val stderr = resultBundle.getString(
+                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_STDERR"
+                ) ?: ""
+                val exitCode = resultBundle.getInt(
+                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_EXIT_CODE", -1
+                )
+                val err = resultBundle.getInt(
+                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_ERR", 0
+                )
+                val errmsg = resultBundle.getString(
+                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_ERRMSG"
+                )
 
                 if (err != 0 || !errmsg.isNullOrBlank()) {
                     bridge.deliverTermuxResult(
                         requestId, ok = false, stdout = stdout, stderr = stderr,
                         exitCode = null,
-                        error = errmsg?.takeIf { it.isNotBlank() } ?: "Termux:API error code $err"
+                        error = errmsg?.takeIf { it.isNotBlank() } ?: "Termux internal error code $err"
                     )
                 } else {
                     bridge.deliverTermuxResult(
@@ -833,18 +868,17 @@ class MainActivity : ComponentActivity() {
         )
 
         val runIntent = Intent("com.termux.RUN_COMMAND").apply {
-            setClassName("com.termux.api", "com.termux.api.app.RunCommandService")
-            putExtra("com.termux.api.extra.COMMAND_PATH", commandPath)
+            setClassName("com.termux", "com.termux.app.RunCommandService")
+            putExtra("com.termux.RUN_COMMAND_PATH", commandPath)
             if (args.isNotEmpty()) {
-                putExtra("com.termux.api.extra.ARGUMENTS", args.toTypedArray())
+                putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args.toTypedArray())
             }
-            if (workdir != null) putExtra("com.termux.api.extra.WORKDIR", workdir)
-            putExtra("com.termux.api.extra.COMMAND_LABEL", "BDS: $command")
-            putExtra("com.termux.api.extra.COMMAND_DESCRIPTION", "Better DeepSeek /termux")
-            putExtra("com.termux.api.extra.PENDING_INTENT", pendingIntent)
+            if (workdir != null) putExtra("com.termux.RUN_COMMAND_WORKDIR", workdir)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pendingIntent)
         }
 
-        startService(runIntent)
+        startForegroundService(runIntent)
 
         webView.postDelayed({
             val stillPending = synchronized(termuxReceivers) { termuxReceivers.remove(requestId) }
