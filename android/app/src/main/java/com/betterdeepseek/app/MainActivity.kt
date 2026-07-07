@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
@@ -130,6 +131,14 @@ private fun mapAcceptTypes(acceptTypes: Array<String>?): List<String> {
     return mapped.toList()
 }
 
+/** Pending Termux launch info captured while awaiting the RUN_COMMAND permission dialog. */
+internal data class TermuxLaunchRequest(
+    val requestId: String,
+    val command: String,
+    val args: List<String>,
+    val workdir: String?,
+)
+
 /**
  * Single-activity host. Loads chat.deepseek.com inside a full-screen WebView and injects the BDS
  * extension scripts on every page finish.
@@ -165,6 +174,35 @@ class MainActivity : ComponentActivity() {
         mutableMapOf<String, BroadcastReceiver>()
     )
     private val TERMUX_TIMEOUT_MS = 5L * 60 * 1000
+    @Volatile private var pendingTermuxLaunch: TermuxLaunchRequest? = null
+
+    // RUN_COMMAND is a dangerous-level permission (unlike most Termux:API
+    // permissions) -- it needs an explicit runtime request/dialog, not just
+    // an install-time auto-grant.
+    private val runCommandPermissionLauncher: ActivityResultLauncher<String> =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                val req = pendingTermuxLaunch
+                pendingTermuxLaunch = null
+                if (req == null) return@registerForActivityResult
+                if (granted) {
+                    try {
+                        launchTermuxCommand(req.requestId, req.command, req.args, req.workdir)
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Termux launch failed", t)
+                        bridge.deliverTermuxResult(
+                            req.requestId, ok = false, stdout = "", stderr = "", exitCode = null,
+                            error = "Failed to launch Termux: ${t.message ?: t.javaClass.simpleName}"
+                        )
+                    }
+                } else {
+                    bridge.deliverTermuxResult(
+                        req.requestId, ok = false, stdout = "", stderr = "", exitCode = null,
+                        error = "RUN_COMMAND permission was denied. Grant it in Android " +
+                            "Settings > Apps > Better DeepSeek > Permissions, then retry " +
+                            "/termux to see the prompt again."
+                    )
+                }
+            }
 
     private val multiFileLauncher: ActivityResultLauncher<Array<String>> =
             registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -265,18 +303,23 @@ class MainActivity : ComponentActivity() {
 
         bridge.onRunTermux = { requestId, command, args, workdir ->
             runOnUiThread {
-                try {
-                    launchTermuxCommand(requestId, command, args, workdir)
-                } catch (t: Throwable) {
-                    Log.e(TAG, "Termux launch failed", t)
-                    bridge.deliverTermuxResult(
-                        requestId,
-                        ok = false,
-                        stdout = "",
-                        stderr = "",
-                        exitCode = null,
-                        error = "Failed to launch Termux: ${t.message ?: t.javaClass.simpleName}"
-                    )
+                val granted = ContextCompat.checkSelfPermission(
+                    this, "com.termux.permission.RUN_COMMAND"
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (granted) {
+                    try {
+                        launchTermuxCommand(requestId, command, args, workdir)
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Termux launch failed", t)
+                        bridge.deliverTermuxResult(
+                            requestId, ok = false, stdout = "", stderr = "", exitCode = null,
+                            error = "Failed to launch Termux: ${t.message ?: t.javaClass.simpleName}"
+                        )
+                    }
+                } else {
+                    pendingTermuxLaunch = TermuxLaunchRequest(requestId, command, args, workdir)
+                    runCommandPermissionLauncher.launch("com.termux.permission.RUN_COMMAND")
                 }
             }
         }
