@@ -15,7 +15,8 @@ import { injectSearchInput } from "./ui/SidebarSearch.js";
 import { checkPendingExport } from "./tools/pending-export.js";
 import { hideTagsInSidebar, hideTagsInHeader } from "./tags/tag-hider.js";
 import { setDeepResearchEnabled } from "./deep-research.js";
-import { tryExecuteRawInput } from "./commands/executor.js";
+import { tryExecuteRawInput } from "./commands/executor.js"
+import { findSendButton } from "./auto.js";
 import { checkPendingHandoff } from "./commands/context-handoff.js";
 import Autocomplete from "./commands/Autocomplete.svelte";
 import CommandsHelp from "./commands/CommandsHelp.svelte";
@@ -774,6 +775,54 @@ let commandsHelpInstance = null
 let cmdSetupTimer = 0
 let currentEditor = null
 let currentKeydownHandler = null
+let commandSendClickListenerInstalled = false
+
+function getEditorText(editor) {
+  const t = (editor.tagName || "").toLowerCase()
+  return t === "textarea" || t === "input" ? editor.value : (editor.textContent || "")
+}
+
+function isSlashCommandText(text) {
+  if (!text.startsWith("/")) return false
+  const hasSpaceAfterCmd = /^\/[a-z0-9_]+\s/.test(text)
+  return hasSpaceAfterCmd || /^\/[a-z0-9_]+$/.test(text)
+}
+
+/**
+ * Mobile keyboards' on-screen Send button often does not dispatch a real
+ * "keydown Enter" event, so the Enter-key interceptor below never fires when
+ * the user taps Send instead of pressing return. This delegated, capturing
+ * click listener catches that case by checking (at click time) whether the
+ * click landed on the current composer send button, independent of any
+ * specific editor/button DOM node surviving re-renders. Installed once,
+ * ever — not tied to setupCommandListener's per-editor lifecycle.
+ */
+function installCommandSendClickInterceptor() {
+  if (commandSendClickListenerInstalled) return
+  commandSendClickListenerInstalled = true
+  document.addEventListener("click", (e) => {
+    const sendBtn = findSendButton()
+    if (!sendBtn) return
+    if (!(e.target === sendBtn || sendBtn.contains(e.target))) return
+    const editor = findComposerEditor()
+    if (!editor) return
+    const text = getEditorText(editor)
+    if (!isSlashCommandText(text)) return
+
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation()
+
+    const ok = tryExecuteRawInput(text)
+    devLog("Cmd", "Send-button click execute cmd result=", ok)
+    if (ok) {
+      const tag = (editor.tagName || "").toLowerCase()
+      if (tag === "textarea" || tag === "input") editor.value = ""
+      else editor.textContent = ""
+      editor.dispatchEvent(new Event("input", { bubbles: true }))
+    }
+  }, true)
+}
 
 function retrySetupCommandListener() {
   devLog("Cmd", "retrySetupCommandListener start, autoInst=", !!autocompleteInstance, "timer=", !!cmdSetupTimer)
@@ -796,6 +845,7 @@ function retrySetupCommandListener() {
 
 function setupCommandListener(editor) {
   devLog("Cmd", "setupCommandListener called, editor=", !!editor, "autoInst=", !!autocompleteInstance, "tag=", editor?.tagName, "id=", editor?.id)
+  installCommandSendClickInterceptor()
   if (autocompleteInstance) {
     devLog("Cmd", "setupCommandListener skipped (already mounted)")
     return
@@ -811,11 +861,10 @@ function setupCommandListener(editor) {
       if (!document.contains(editor)) { devLog("Cmd", "Enter ignored — editor detached"); return }
       const dropdown = document.querySelector(".bds-cmd-dropdown")
       if (dropdown) { devLog("Cmd", "Enter ignored — dropdown open"); return }
-      const text = (() => { const t = (editor.tagName || "").toLowerCase(); return t === "textarea" || t === "input" ? editor.value : (editor.textContent || "") })()
+      const text = getEditorText(editor)
       devLog("Cmd", "Enter pressed, text=", text.substring(0, 80).replace(/\n/g, "\\n"))
-      if (text.startsWith("/")) {
-        const hasSpaceAfterCmd = /^\/[a-z0-9_]+\s/.test(text)
-        if (hasSpaceAfterCmd || /^\/[a-z0-9_]+$/.test(text)) {
+      if (isSlashCommandText(text)) {
+        {
           e.preventDefault()
           const ok = tryExecuteRawInput(text)
           devLog("Cmd", "Enter execute cmd result=", ok)

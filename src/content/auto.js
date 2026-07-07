@@ -740,7 +740,7 @@ function hasOverLimitIndicator(editor = findChatEditor()) {
   );
 }
 
-function findSendButton() {
+export function findSendButton() {
   const editor = findChatEditor();
   const roots = getComposerRootCandidates(editor);
   const buttons = Array.from(document.querySelectorAll('div[role="button"], button'));
