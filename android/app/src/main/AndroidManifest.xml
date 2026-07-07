@@ -13,7 +13,7 @@
         android:maxSdkVersion="28" />
     <!-- Termux RUN_COMMAND integration (used by the /termux slash command).
          Custom permission declared by the Termux app with protectionLevel
-         "normal" -- auto-granted at install when Termux is already
+         "normal", auto-granted at install when Termux is already
          installed; the native side also checks this at runtime and
          surfaces a clear error if it's missing. -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
