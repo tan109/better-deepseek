@@ -808,34 +808,26 @@ class MainActivity : ComponentActivity() {
                 runCatching { unregisterReceiver(this) }
                 synchronized(termuxReceivers) { termuxReceivers.remove(requestId) }
 
-                val resultBundle = intent?.getBundleExtra(
-                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE"
-                )
+                // Confirmed literal constants from termux-app's
+                // TermuxConstants.java (TERMUX_APP.TERMUX_SERVICE class) --
+                // these are short simple strings, NOT fully-qualified like
+                // "com.termux.app.TermuxService.X".
+                val resultBundle = intent?.getBundleExtra("result")
 
                 if (resultBundle == null) {
                     bridge.deliverTermuxResult(
                         requestId, ok = false, stdout = "", stderr = "", exitCode = null,
                         error = "Termux sent a result callback but no result bundle was found " +
-                            "(EXTRA_PLUGIN_RESULT_BUNDLE key may differ from expected)."
+                            "at the \"result\" key."
                     )
                     return
                 }
 
-                val stdout = resultBundle.getString(
-                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_STDOUT"
-                ) ?: ""
-                val stderr = resultBundle.getString(
-                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_STDERR"
-                ) ?: ""
-                val exitCode = resultBundle.getInt(
-                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_EXIT_CODE", -1
-                )
-                val err = resultBundle.getInt(
-                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_ERR", 0
-                )
-                val errmsg = resultBundle.getString(
-                    "com.termux.app.TermuxService.EXTRA_PLUGIN_RESULT_BUNDLE_ERRMSG"
-                )
+                val stdout = resultBundle.getString("stdout") ?: ""
+                val stderr = resultBundle.getString("stderr") ?: ""
+                val exitCode = resultBundle.getInt("exitCode", -1)
+                val err = resultBundle.getInt("err", 0)
+                val errmsg = resultBundle.getString("errmsg")
 
                 if (err != 0 || !errmsg.isNullOrBlank()) {
                     bridge.deliverTermuxResult(
