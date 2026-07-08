@@ -200,6 +200,10 @@ class WebViewBridge(
         private val githubApiBaseUrl: String = DEFAULT_GITHUB_API_BASE_URL,
 ) {
 
+    init {
+        activeInstance = this
+    }
+
     private val prefs: SharedPreferences =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -1296,6 +1300,14 @@ class WebViewBridge(
     }
 
     companion object {
+        /**
+         * Static reference to the most recently constructed WebViewBridge,
+         * so same-process components with no direct reference to it (like
+         * TermuxResultReceiverService, reached via a PendingIntent callback)
+         * can still deliver results back into the WebView.
+         */
+        @Volatile var activeInstance: WebViewBridge? = null
+
         private const val TAG = "BdsWebViewBridge"
         private const val PREFS_NAME = "bds_storage"
         private const val DEFAULT_GITHUB_API_BASE_URL = "https://api.github.com"

@@ -74,6 +74,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Receives Termux RUN_COMMAND results via PendingIntent.getService().
+             Not exported -- only Termux itself (via the PendingIntent we hand
+             it, which carries our app's identity) can trigger this. -->
+        <service
+            android:name=".TermuxResultReceiverService"
+            android:exported="false" />
+
         <!-- FileProvider for legacy (<=API 28) ACTION_VIEW handoff after a
              blob download writes into the app's external Downloads folder. -->
         <provider
