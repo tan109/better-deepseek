@@ -784,8 +784,10 @@ function getEditorText(editor) {
 
 function isSlashCommandText(text) {
   if (!text.startsWith("/")) return false
-  const hasSpaceAfterCmd = /^\/[a-z0-9_]+\s/.test(text)
-  return hasSpaceAfterCmd || /^\/[a-z0-9_]+$/.test(text)
+  // Allow hyphens in command names (e.g. "termux-config"), not just
+  // letters/digits/underscore.
+  const hasSpaceAfterCmd = /^\/[a-z0-9_-]+\s/.test(text)
+  return hasSpaceAfterCmd || /^\/[a-z0-9_-]+$/.test(text)
 }
 
 /**
