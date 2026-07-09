@@ -4,6 +4,7 @@ import { searchWeb } from "../files/search-reader.js"
 import { injectPureTextAndSend, readFileText, sendFileWithMessage } from "../auto.js"
 import { fetchGitHubRepo } from "../files/github-reader.js"
 import { runTermuxCommand, formatTermuxResult } from "../files/termux-runner.js"
+import { STORAGE_KEYS } from "../../lib/constants.js"
 import appState from "../state.js"
 import { exportSession } from "../tools/exporter.js"
 import { performCompress, performSummarize } from "./context-handoff.js"
@@ -87,6 +88,17 @@ async function executeBuiltin(cmd, args, rawArgs) {
         } catch (err) {
           if (state.ui) state.ui.showToast(`GitHub fetch failed: ${err.message}`)
         }
+        break
+      }
+      case "termux-config": {
+        const token = args[0]
+        const port = args[1] ? Number.parseInt(args[1], 10) : appState.settings.termuxServerPort
+        appState.settings.termuxServerToken = token
+        if (Number.isFinite(port) && port > 0) {
+          appState.settings.termuxServerPort = port
+        }
+        await chrome.storage.local.set({ [STORAGE_KEYS.settings]: appState.settings })
+        if (state.ui) state.ui.showToast(`Termux server configured (port ${appState.settings.termuxServerPort})`)
         break
       }
       case "termux": {

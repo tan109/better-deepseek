@@ -11,13 +11,6 @@
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
-    <!-- Termux RUN_COMMAND integration (used by the /termux slash command).
-         Custom permission declared by the Termux app with protectionLevel
-         "normal", auto-granted at install when Termux is already
-         installed; the native side also checks this at runtime and
-         surfaces a clear error if it's missing. -->
-    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
-
     <!-- Android 11+ package visibility: required to launch ACTION_VIEW
          intents (file viewers for downloads, external browsers). -->
     <queries>
@@ -35,11 +28,6 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="*/*" />
         </intent>
-        <!-- Termux RUN_COMMAND integration: without these, checking whether
-             Termux / Termux:API are installed (and launching the intent)
-             fails on Android 11+ package-visibility restrictions. -->
-        <package android:name="com.termux" />
-        <package android:name="com.termux.api" />
     </queries>
 
     <application
@@ -73,13 +61,6 @@
                     android:host="chat.deepseek.com" />
             </intent-filter>
         </activity>
-
-        <!-- Receives Termux RUN_COMMAND results via PendingIntent.getService().
-             Not exported, only Termux itself (via the PendingIntent we hand
-             it, which carries our app's identity) can trigger this. -->
-        <service
-            android:name=".TermuxResultReceiverService"
-            android:exported="false" />
 
         <!-- FileProvider for legacy (<=API 28) ACTION_VIEW handoff after a
              blob download writes into the app's external Downloads folder. -->

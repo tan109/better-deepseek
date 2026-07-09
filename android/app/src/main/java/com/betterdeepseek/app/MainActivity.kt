@@ -131,14 +131,6 @@ private fun mapAcceptTypes(acceptTypes: Array<String>?): List<String> {
     return mapped.toList()
 }
 
-/** Pending Termux launch info captured while awaiting the RUN_COMMAND permission dialog. */
-internal data class TermuxLaunchRequest(
-    val requestId: String,
-    val command: String,
-    val args: List<String>,
-    val workdir: String?,
-)
-
 /**
  * Single-activity host. Loads chat.deepseek.com inside a full-screen WebView and injects the BDS
  * extension scripts on every page finish.
@@ -167,37 +159,6 @@ class MainActivity : ComponentActivity() {
 
     @Volatile private var pendingPickFilesRequestId: String? = null
     @Volatile private var pendingPickFilesMode: String? = null
-
-    private val TERMUX_TIMEOUT_MS = 5L * 60 * 1000
-    @Volatile private var pendingTermuxLaunch: TermuxLaunchRequest? = null
-
-    // RUN_COMMAND is a dangerous-level permission (unlike most Termux:API
-    // permissions) -- it needs an explicit runtime request/dialog, not just
-    // an install-time auto-grant.
-    private val runCommandPermissionLauncher: ActivityResultLauncher<String> =
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-                val req = pendingTermuxLaunch
-                pendingTermuxLaunch = null
-                if (req == null) return@registerForActivityResult
-                if (granted) {
-                    try {
-                        launchTermuxCommand(req.requestId, req.command, req.args, req.workdir)
-                    } catch (t: Throwable) {
-                        Log.e(TAG, "Termux launch failed", t)
-                        bridge.deliverTermuxResult(
-                            req.requestId, ok = false, stdout = "", stderr = "", exitCode = null,
-                            error = "Failed to launch Termux: ${t.message ?: t.javaClass.simpleName}"
-                        )
-                    }
-                } else {
-                    bridge.deliverTermuxResult(
-                        req.requestId, ok = false, stdout = "", stderr = "", exitCode = null,
-                        error = "RUN_COMMAND permission was denied. Grant it in Android " +
-                            "Settings > Apps > Better DeepSeek > Permissions, then retry " +
-                            "/termux to see the prompt again."
-                    )
-                }
-            }
 
     private val multiFileLauncher: ActivityResultLauncher<Array<String>> =
             registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -292,29 +253,6 @@ class MainActivity : ComponentActivity() {
                     pendingPickFilesRequestId = null
                     pendingPickFilesMode = null
                     bridge.deliverPickError(requestId, "picker-launch-failed")
-                }
-            }
-        }
-
-        bridge.onRunTermux = { requestId, command, args, workdir ->
-            runOnUiThread {
-                val granted = ContextCompat.checkSelfPermission(
-                    this, "com.termux.permission.RUN_COMMAND"
-                ) == PackageManager.PERMISSION_GRANTED
-
-                if (granted) {
-                    try {
-                        launchTermuxCommand(requestId, command, args, workdir)
-                    } catch (t: Throwable) {
-                        Log.e(TAG, "Termux launch failed", t)
-                        bridge.deliverTermuxResult(
-                            requestId, ok = false, stdout = "", stderr = "", exitCode = null,
-                            error = "Failed to launch Termux: ${t.message ?: t.javaClass.simpleName}"
-                        )
-                    }
-                } else {
-                    pendingTermuxLaunch = TermuxLaunchRequest(requestId, command, args, workdir)
-                    runCommandPermissionLauncher.launch("com.termux.permission.RUN_COMMAND")
                 }
             }
         }
@@ -452,10 +390,6 @@ class MainActivity : ComponentActivity() {
         bridge.onThemeChanged = null
         bridge.evaluateJs = null
         bridge.onPickFiles = null
-        bridge.onRunTermux = null
-        if (WebViewBridge.activeInstance === bridge) {
-            WebViewBridge.activeInstance = null
-        }
         webView.removeJavascriptInterface(BRIDGE_NAME)
         if (::cookieManager.isInitialized) {
             cookieManager.flush()
@@ -761,74 +695,6 @@ class MainActivity : ComponentActivity() {
         }
         builder.append('"')
         return builder.toString()
-    }
-
-    // -- Termux RUN_COMMAND --------------------------------------------
-
-    /**
-     * Launch the Termux:API RunCommandService for the given requestId and
-     * register a one-shot BroadcastReceiver to capture the result via the
-     * PendingIntent broadcast. Bare command names are resolved against the
-     * standard Termux binary path; absolute paths are used as-is.
-     */
-    private fun launchTermuxCommand(
-        requestId: String,
-        command: String,
-        args: List<String>,
-        workdir: String?
-    ) {
-        val action = "com.betterdeepseek.app.TERMUX_RESULT.$requestId"
-
-        val commandPath = if (command.startsWith("/")) {
-            command
-        } else {
-            "/data/data/com.termux/files/usr/bin/$command"
-        }
-
-        // Real Termux RUN_COMMAND contract, confirmed against termux-app's
-        // published source (TermuxConstants.java) and every real working
-        // example found (StackOverflow samples, termux-tasker's own issue
-        // threads): the request goes to the MAIN Termux app
-        // (com.termux / com.termux.app.RunCommandService), extras are flat
-        // "com.termux.RUN_COMMAND_*" strings, and -- critically -- the
-        // result callback must use PendingIntent.getService() targeting a
-        // real Service (TermuxResultReceiverService), not
-        // PendingIntent.getBroadcast(). Every working example uses
-        // getService(); repeated attempts with getBroadcast() never
-        // received a result bundle despite the command executing.
-        val resultIntent = Intent(this, TermuxResultReceiverService::class.java).apply {
-            putExtra(TermuxResultReceiverService.EXTRA_BDS_REQUEST_ID, requestId)
-        }
-        val pendingIntent = PendingIntent.getService(
-            this, requestId.hashCode(), resultIntent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val runIntent = Intent("com.termux.RUN_COMMAND").apply {
-            setClassName("com.termux", "com.termux.app.RunCommandService")
-            putExtra("com.termux.RUN_COMMAND_PATH", commandPath)
-            if (args.isNotEmpty()) {
-                putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args.toTypedArray())
-            }
-            if (workdir != null) putExtra("com.termux.RUN_COMMAND_WORKDIR", workdir)
-            putExtra("com.termux.RUN_COMMAND_BACKGROUND", true)
-            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pendingIntent)
-        }
-
-        startForegroundService(runIntent)
-
-        // Fallback if Termux never calls back within 5 minutes. Harmless if
-        // the real result already arrived first -- termux-runner.js's JS
-        // side only acts on whichever settles first and ignores the rest.
-        webView.postDelayed({
-            bridge.deliverTermuxResult(
-                requestId, ok = false, stdout = "", stderr = "", exitCode = null,
-                error = "Termux command timed out after 5 minutes. " +
-                    "If this is unexpected, ensure `allow-external-apps=true` " +
-                    "is set in `~/.termux/termux.properties` inside Termux " +
-                    "(then fully restart Termux)."
-            )
-        }, TERMUX_TIMEOUT_MS)
     }
 
     companion object {

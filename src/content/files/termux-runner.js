@@ -1,13 +1,16 @@
 /**
- * Termux Command Runner
+ * Termux Command Runner (HTTP server variant)
  *
- * Sends a shell command to the native bridge (which invokes Termux:API's
- * RunCommandService via the RUN_COMMAND intent), then awaits the result
- * delivered as a CustomEvent -- since the intent is asynchronous, the bridge
- * returns { ok: true, pending: true, requestId } synchronously and the
- * actual { ok, stdout, stderr, exitCode } arrives later via a
- * `__bds_native_termux_result_<requestId>` CustomEvent dispatched by
- * WebViewBridge.deliverTermuxResult().
+ * Sends a shell command to a small HTTP server running inside Termux
+ * (127.0.0.1 only) instead of using the Android RUN_COMMAND intent, which
+ * proved unreliable across multiple attempts (see git history / commit
+ * messages around 2026-07-08 for the full RUN_COMMAND debugging trail).
+ *
+ * SECURITY: Android does not sandbox 127.0.0.1 per-app -- any app on the
+ * device can reach the same loopback port. A shared secret token
+ * (appState.settings.termuxServerToken, set via /termux-config) is
+ * required and sent as an Authorization header; the native bridge should
+ * refuse to proceed without one configured.
  *
  * SECURITY: This module is ONLY called from the /termux slash command in
  * commands/executor.js. There is no <BDS:AUTO:...> tag and no AI-output
@@ -18,20 +21,34 @@
  *   { ok: false, error: "Termux integration is Android-only." }
  */
 
-const TIMEOUT_MS = 60_000;
+import appState from "../state.js";
 
 export async function runTermuxCommand(command, args, workdir) {
   if (!command || typeof command !== "string") {
     return { ok: false, error: "No command provided." };
   }
 
-  let init;
+  const token = String(appState.settings.termuxServerToken || "").trim();
+  if (!token) {
+    return {
+      ok: false,
+      error:
+        "No Termux server token configured. Run /termux-config <token> first " +
+        "(the token must match TERMUX_BDS_TOKEN in the server script running inside Termux).",
+    };
+  }
+
+  const port = Number(appState.settings.termuxServerPort) || 8817;
+
+  let result;
   try {
-    init = await chrome.runtime.sendMessage({
+    result = await chrome.runtime.sendMessage({
       type: "bds-run-termux-command",
       command,
       args: Array.isArray(args) ? args : [],
       workdir: workdir || null,
+      token,
+      port,
     });
   } catch (err) {
     return {
@@ -40,50 +57,10 @@ export async function runTermuxCommand(command, args, workdir) {
     };
   }
 
-  if (!init) {
+  if (!result) {
     return { ok: false, error: "Empty bridge response." };
   }
-  if (!init.ok) {
-    return init;
-  }
-  if (!init.pending || !init.requestId) {
-    return init;
-  }
-
-  const requestId = String(init.requestId);
-  const eventName = `__bds_native_termux_result_${requestId}`;
-
-  return new Promise((resolve) => {
-    let settled = false;
-
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      window.removeEventListener(eventName, handler);
-      resolve({
-        ok: false,
-        error:
-          `Termux command did not return within ${TIMEOUT_MS / 1000}s. ` +
-          "If this is unexpected, ensure `allow-external-apps=true` is set " +
-          "in `~/.termux/termux.properties` inside Termux (then restart Termux).",
-      });
-    }, TIMEOUT_MS);
-
-    function handler(e) {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      window.removeEventListener(eventName, handler);
-      const detail = e && e.detail;
-      if (detail && typeof detail === "object") {
-        resolve(detail);
-      } else {
-        resolve({ ok: false, error: "Empty result from Termux bridge." });
-      }
-    }
-
-    window.addEventListener(eventName, handler);
-  });
+  return result;
 }
 
 export function formatTermuxResult(command, args, result) {

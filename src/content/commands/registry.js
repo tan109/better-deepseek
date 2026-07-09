@@ -101,6 +101,22 @@ export const COMMANDS = [
     },
   },
   {
+    id: "termux-config",
+    aliases: ["txconfig"],
+    name: "Termux Server Config",
+    description: "Set the shared secret token (and optional port) for the Termux HTTP server used by /termux",
+    usage: "/termux-config <token> [port]",
+    category: "tools",
+    descKey: "commands.cmdTermuxConfigDesc",
+    usageKey: "commands.cmdTermuxConfigUsage",
+    catKey: "commands.cattools",
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+    minArgs: 1,
+    validateArgs(args) {
+      return args[0] ? null : "Usage: /termux-config <token> [port]"
+    },
+  },
+  {
     id: "help",
     aliases: ["?"],
     name: "Help",

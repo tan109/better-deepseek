@@ -200,10 +200,6 @@ class WebViewBridge(
         private val githubApiBaseUrl: String = DEFAULT_GITHUB_API_BASE_URL,
 ) {
 
-    init {
-        activeInstance = this
-    }
-
     private val prefs: SharedPreferences =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -232,14 +228,6 @@ class WebViewBridge(
      * Mode is "files" or "folder"; requestId is the JS correlation key.
      */
     @Volatile var onPickFiles: ((mode: String, requestId: String) -> Unit)? = null
-
-    /**
-     * Set by MainActivity to launch a Termux RUN_COMMAND intent. Called from
-     * [handleRunTermuxCommand] after pre-flight checks (Termux + Termux:API
-     * installed, RUN_COMMAND permission granted) pass.
-     */
-    @Volatile var onRunTermux:
-            ((requestId: String, command: String, args: List<String>, workdir: String?) -> Unit)? = null
 
     /**
      * Returns the last DeepSeek page theme written by the extension's theme.js via
@@ -998,15 +986,15 @@ class WebViewBridge(
     }
 
     /**
-     * Termux RUN_COMMAND dispatcher (manual /termux slash command only --
-     * see termux-runner.js and commands/executor.js; there is no AI-tag
-     * path that reaches this method).
+     * Termux command dispatcher (manual /termux slash command only -- see
+     * termux-runner.js and commands/executor.js; there is no AI-tag path
+     * that reaches this method).
      *
-     * Pre-flight checks run synchronously and return an immediate
-     * { ok: false, error } if they fail. If they pass, [onRunTermux] is
-     * invoked and this returns { ok: true, pending: true, requestId }
-     * synchronously; the real result arrives later via a CustomEvent
-     * dispatched by [deliverTermuxResult].
+     * Sends a synchronous HTTP POST to a small server running inside
+     * Termux on 127.0.0.1, instead of the Android RUN_COMMAND intent
+     * (which proved unreliable across multiple verified-against-source
+     * attempts). Requires a shared secret token (Authorization header)
+     * since 127.0.0.1 is not sandboxed per-app on Android.
      */
     private fun handleRunTermuxCommand(payload: JSONObject, response: JSONObject) {
         val command = payload.optString("command").trim()
@@ -1016,105 +1004,73 @@ class WebViewBridge(
             return
         }
 
-        val args = mutableListOf<String>()
-        val argsArr = payload.optJSONArray("args")
-        if (argsArr != null) {
-            for (i in 0 until argsArr.length()) {
-                args.add(argsArr.optString(i))
-            }
+        val token = payload.optString("token").trim()
+        if (token.isEmpty()) {
+            response.put("ok", false)
+            response.put("error", "No Termux server token configured.")
+            return
+        }
+
+        val port = payload.optInt("port", 8817)
+        val args = JSONArray()
+        payload.optJSONArray("args")?.let { arr ->
+            for (i in 0 until arr.length()) args.put(arr.optString(i))
         }
         val workdir = payload.optString("workdir").takeIf { it.isNotEmpty() }
 
-        val pm = context.packageManager
-        if (!isPackageInstalled(pm, "com.termux")) {
-            response.put("ok", false)
-            response.put(
-                "error",
-                "Termux app is not installed. Install it from F-Droid or " +
-                    "https://github.com/termux/termux-app/releases first."
-            )
-            return
-        }
-        if (!isPackageInstalled(pm, "com.termux.api")) {
-            response.put("ok", false)
-            response.put(
-                "error",
-                "Termux:API app is not installed. Install it from F-Droid or " +
-                    "https://github.com/termux/termux-api/releases, then run " +
-                    "`pkg install termux-api` inside Termux."
-            )
-            return
+        val requestBody = JSONObject().apply {
+            put("command", command)
+            put("args", args)
+            if (workdir != null) put("workdir", workdir)
         }
 
-        // RUN_COMMAND is a dangerous-level permission requiring a runtime
-        // request/dialog, not an install-time auto-grant -- MainActivity's
-        // onRunTermux handler owns the check + request flow, since only an
-        // Activity can show a permission dialog. This bridge method just
-        // hands off to it.
-        val handler = onRunTermux
-        if (handler == null) {
-            response.put("ok", false)
-            response.put("error", "Termux launcher is not initialized.")
-            return
-        }
+        val url = "http://127.0.0.1:$port/run"
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $token")
+            .post(requestBody.toString().toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()))
+            .build()
 
-        val requestId = generateTermuxRequestId()
-        handler.invoke(requestId, command, args, workdir)
-
-        response.put("ok", true)
-        response.put("pending", true)
-        response.put("requestId", requestId)
-    }
-
-    private fun isPackageInstalled(pm: PackageManager, packageName: String): Boolean =
         try {
-            @Suppress("DEPRECATION")
-            pm.getPackageInfo(packageName, 0)
-            true
-        } catch (e: PackageManager.NameNotFoundException) {
-            false
-        }
+            httpClient.newCall(request).execute().use { resp ->
+                val bodyText = resp.body?.string() ?: ""
 
-    private fun generateTermuxRequestId(): String {
-        val ts = java.lang.Long.toString(System.currentTimeMillis(), 36)
-        val rnd = (1..8).map { ('a'..'z').random() }.joinToString("")
-        return "tx_${ts}_$rnd"
+                if (!resp.isSuccessful) {
+                    if (resp.code == 401) {
+                        response.put("ok", false)
+                        response.put("error", "Termux server rejected the token (401). Check /termux-config matches TERMUX_BDS_TOKEN in the server script.")
+                        return
+                    }
+                    response.put("ok", false)
+                    response.put("error", "Termux server returned ${resp.code}: $bodyText")
+                    return
+                }
+
+                val parsed = try {
+                    JSONObject(bodyText)
+                } catch (t: Throwable) {
+                    response.put("ok", false)
+                    response.put("error", "Unexpected response from Termux server: $bodyText")
+                    return
+                }
+
+                response.put("ok", parsed.optBoolean("ok", false))
+                response.put("stdout", parsed.optString("stdout", ""))
+                response.put("stderr", parsed.optString("stderr", ""))
+                if (parsed.has("exitCode")) response.put("exitCode", parsed.optInt("exitCode"))
+                if (parsed.has("error")) response.put("error", parsed.optString("error"))
+            }
+        } catch (t: Throwable) {
+            response.put("ok", false)
+            response.put(
+                "error",
+                "Could not reach the Termux server at $url. Is the server script running " +
+                    "inside Termux? (${t.message ?: t.javaClass.simpleName})"
+            )
+        }
     }
 
-    /**
-     * Called by MainActivity when the Termux:API result PendingIntent fires.
-     * Dispatches a page CustomEvent named
-     * `__bds_native_termux_result_<requestId>`, mirroring the pickFiles
-     * async-delivery pattern.
-     */
-    internal fun deliverTermuxResult(
-        requestId: String,
-        ok: Boolean,
-        stdout: String,
-        stderr: String,
-        exitCode: Int?,
-        error: String?
-    ) {
-        val safeId = requestId.filter { it.isLetterOrDigit() || it == '_' || it == '-' }.take(64)
-        if (safeId.isEmpty()) return
-
-        val payload = JSONObject().apply {
-            put("ok", ok)
-            put("stdout", stdout)
-            put("stderr", stderr)
-            if (exitCode != null) put("exitCode", exitCode)
-            if (error != null) put("error", error)
-        }
-        val payloadQuoted = JSONObject.quote(payload.toString())
-        val script =
-            "(function(){try{var d=JSON.parse($payloadQuoted);" +
-                "window.dispatchEvent(new CustomEvent('__bds_native_termux_result_$safeId'," +
-                "{detail:d}));}" +
-                "catch(e){console.error('[BDS] termux result delivery failed',e)}})();"
-        postScript(script)
-    }
-
-    private fun handleFetchGithubCommits(payload: JSONObject, response: JSONObject) {
+        private fun handleFetchGithubCommits(payload: JSONObject, response: JSONObject) {
         val owner = payload.optString("owner").trim()
         val repo = payload.optString("repo").trim()
         val branch = payload.optString("branch").trim().ifEmpty { "main" }
@@ -1300,14 +1256,6 @@ class WebViewBridge(
     }
 
     companion object {
-        /**
-         * Static reference to the most recently constructed WebViewBridge,
-         * so same-process components with no direct reference to it (like
-         * TermuxResultReceiverService, reached via a PendingIntent callback)
-         * can still deliver results back into the WebView.
-         */
-        @Volatile var activeInstance: WebViewBridge? = null
-
         private const val TAG = "BdsWebViewBridge"
         private const val PREFS_NAME = "bds_storage"
         private const val DEFAULT_GITHUB_API_BASE_URL = "https://api.github.com"

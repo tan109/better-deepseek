@@ -750,6 +750,11 @@ export const DEFAULT_SETTINGS = {
   autoDownloadFiles: false,
   autoDownloadLongWorkZip: false,
   githubToken: "",
+  // Localhost-only server running inside Termux, used by the /termux
+  // command. Requires a shared secret token since Android does not sandbox
+  // 127.0.0.1 per-app -- any app on the device can reach the same port.
+  termuxServerToken: "",
+  termuxServerPort: 8817,
   voiceMode: false,
   voiceLanguage: (typeof navigator !== 'undefined' ? navigator.language : 'en-US'),
   autoSubmitVoice: true,
