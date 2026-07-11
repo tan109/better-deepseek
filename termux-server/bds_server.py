@@ -28,6 +28,7 @@ import http.server
 import json
 import os
 import secrets
+import shlex
 import subprocess
 import sys
 
@@ -101,11 +102,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "args must be a list of strings."})
             return
 
-        argv = [command] + [str(a) for a in args]
+        # Run through an actual shell (bash) rather than exec'ing the
+        # command directly, so shell builtins (echo, cd, etc.), pipes,
+        # redirects, and PATH resolution all behave the way a normal
+        # terminal command would.
+        full_command = shlex.join([command] + [str(a) for a in args])
 
         try:
             result = subprocess.run(
-                argv,
+                ["bash", "-c", full_command],
                 cwd=workdir,
                 capture_output=True,
                 text=True,
