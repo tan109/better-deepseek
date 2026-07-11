@@ -1016,7 +1016,11 @@ class WebViewBridge(
         payload.optJSONArray("args")?.let { arr ->
             for (i in 0 until arr.length()) args.put(arr.optString(i))
         }
-        val workdir = payload.optString("workdir").takeIf { it.isNotEmpty() }
+        // NOTE: JSONObject.optString() on a JSON null value returns the
+        // literal string "null" (org.json quirk), not an empty string --
+        // that bug sent cwd="null" to the server, breaking every command.
+        // Checking the raw type instead of using optString avoids this.
+        val workdir = (payload.opt("workdir") as? String)?.takeIf { it.isNotEmpty() }
 
         val requestBody = JSONObject().apply {
             put("command", command)

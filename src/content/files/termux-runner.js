@@ -40,20 +40,16 @@ export async function runTermuxCommand(command, args, workdir) {
 
   const port = Number(appState.settings.termuxServerPort) || 8817;
 
-  const payload = {
-    type: "bds-run-termux-command",
-    command,
-    args: Array.isArray(args) ? args : [],
-    workdir: workdir || null,
-    token,
-    port,
-  };
-  console.log("[BDS-DEBUG] runTermuxCommand payload:", JSON.stringify(payload));
-
   let result;
   try {
-    result = await chrome.runtime.sendMessage(payload);
-    console.log("[BDS-DEBUG] runTermuxCommand result:", JSON.stringify(result));
+    result = await chrome.runtime.sendMessage({
+      type: "bds-run-termux-command",
+      command,
+      args: Array.isArray(args) ? args : [],
+      workdir: workdir || null,
+      token,
+      port,
+    });
   } catch (err) {
     return {
       ok: false,

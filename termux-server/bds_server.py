@@ -108,9 +108,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # terminal command would.
         full_command = shlex.join([command] + [str(a) for a in args])
 
+        # Use the fixed, known Termux bash path instead of relying on
+        # PATH lookup -- avoids ambiguity across however this server
+        # process happened to be started (tmux, different shell contexts,
+        # etc. can carry different PATH values).
+        bash_path = "/data/data/com.termux/files/usr/bin/bash"
+        if not os.path.exists(bash_path):
+            bash_path = "bash"  # fall back to PATH lookup as a last resort
+
         try:
             result = subprocess.run(
-                ["bash", "-c", full_command],
+                [bash_path, "-c", full_command],
                 cwd=workdir,
                 capture_output=True,
                 text=True,
