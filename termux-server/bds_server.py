@@ -91,22 +91,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": f"Invalid JSON body: {e}"})
             return
 
-        command = str(data.get("command", "")).strip()
-        args = data.get("args") or []
+        # "command" is the FULL raw shell command line, exactly as the
+        # user typed it (e.g. "cd foo && tree", "ls | wc -l") -- not split
+        # into a program + argv list and reassembled. Reassembling via
+        # shlex.join previously quoted shell operators like && into literal
+        # argument text, silently breaking any compound command.
+        full_command = str(data.get("command", "")).strip()
         workdir = data.get("workdir") or None
 
-        if not command:
+        if not full_command:
             self._send_json(400, {"ok": False, "error": "No command provided."})
             return
-        if not isinstance(args, list):
-            self._send_json(400, {"ok": False, "error": "args must be a list of strings."})
-            return
-
-        # Run through an actual shell (bash) rather than exec'ing the
-        # command directly, so shell builtins (echo, cd, etc.), pipes,
-        # redirects, and PATH resolution all behave the way a normal
-        # terminal command would.
-        full_command = shlex.join([command] + [str(a) for a in args])
 
         # Use the fixed, known Termux bash path instead of relying on
         # PATH lookup -- avoids ambiguity across however this server

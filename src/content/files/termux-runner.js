@@ -23,8 +23,15 @@
 
 import appState from "../state.js";
 
-export async function runTermuxCommand(command, args, workdir) {
-  if (!command || typeof command !== "string") {
+/**
+ * @param {string} commandLine - The FULL raw shell command line, exactly as
+ *   the user typed it after "/termux " (e.g. "cd foo && tree", "ls | wc -l").
+ *   Sent as a single opaque string and run via `bash -c commandLine` on the
+ *   server, so shell syntax is preserved instead of being escaped into
+ *   literal argument text.
+ */
+export async function runTermuxCommand(commandLine) {
+  if (!commandLine || typeof commandLine !== "string" || !commandLine.trim()) {
     return { ok: false, error: "No command provided." };
   }
 
@@ -44,9 +51,7 @@ export async function runTermuxCommand(command, args, workdir) {
   try {
     result = await chrome.runtime.sendMessage({
       type: "bds-run-termux-command",
-      command,
-      args: Array.isArray(args) ? args : [],
-      workdir: workdir || null,
+      command: commandLine,
       token,
       port,
     });
@@ -63,10 +68,7 @@ export async function runTermuxCommand(command, args, workdir) {
   return result;
 }
 
-export function formatTermuxResult(command, args, result) {
-  const argsStr = (args || []).join(" ");
-  const fullCommand = argsStr ? `${command} ${argsStr}` : command;
-
+export function formatTermuxResult(fullCommand, result) {
   if (!result || !result.ok) {
     const err = (result && result.error) || "Unknown error";
     return (

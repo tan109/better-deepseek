@@ -105,14 +105,18 @@ async function executeBuiltin(cmd, args, rawArgs) {
         // SECURITY: this case is reachable ONLY from the user typing
         // "/termux ..." into the chat input via tryExecuteRawInput. There
         // is no <BDS:AUTO:...> tag and no AI-output path that reaches here.
-        const command = args[0]
-        const cmdArgs = args.slice(1)
+        //
+        // The FULL text after "/termux " is sent as one raw shell command
+        // line (not split into command+args and reassembled), so shell
+        // syntax the user types -- &&, |, >, quotes -- is preserved exactly
+        // as typed instead of being escaped into literal argument text.
+        const commandLine = rawArgs
         try {
-          const result = await runTermuxCommand(command, cmdArgs)
-          const text = formatTermuxResult(command, cmdArgs, result)
+          const result = await runTermuxCommand(commandLine)
+          const text = formatTermuxResult(commandLine, result)
           await injectPureTextAndSend(
             text,
-            `/termux ${command} ${cmdArgs.join(" ")}`.trim()
+            `/termux ${commandLine}`.trim()
           )
           if (!result.ok && state.ui) {
             state.ui.showToast(`Termux command failed: ${result.error || "see chat"}`)
