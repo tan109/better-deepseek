@@ -73,7 +73,7 @@ export const COMMANDS = [
     aliases: ["gh"],
     name: "GitHub Fetch",
     description: "Fetch a GitHub repo or a single file (via a /blob/ URL) directly, without relying on the AI to request it",
-    usage: "/github <owner/repo, repo URL, or file blob URL>",
+    usage: "/github <target> [target2 target3 ...]  (owner/repo, repo URL, or file blob URL, space-separated for multiple)",
     category: "tools",
     descKey: "commands.cmdGithubDesc",
     usageKey: "commands.cmdGithubUsage",

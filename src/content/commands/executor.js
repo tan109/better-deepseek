@@ -75,16 +75,66 @@ async function executeBuiltin(cmd, args, rawArgs) {
         break
       case "github": {
         const token = String(appState.settings.githubToken || "").trim()
-        const repoArg = rawArgs || args.join(" ")
-        try {
-          const file = await fetchGitHubRepo(repoArg, () => {}, { token })
-          if (file) {
-            await sendFileWithMessage(
-              file,
-              `<BetterDeepSeek>\n[BDS:AUTO] GitHub Fetch Result for: ${repoArg}\n</BetterDeepSeek>`,
-              "GitHub command fetch"
-            )
+        // Support multiple space-separated repo/URL args in one command,
+        // e.g. "/github owner/repo1 owner/repo2 https://github.com/x/y/blob/main/f.js".
+        // URLs and owner/repo shorthand never contain raw spaces, so
+        // whitespace-splitting is safe.
+        const targets = (rawArgs || args.join(" ")).split(/\s+/).filter(Boolean)
+
+        if (targets.length === 1) {
+          const repoArg = targets[0]
+          try {
+            const file = await fetchGitHubRepo(repoArg, () => {}, { token })
+            if (file) {
+              await sendFileWithMessage(
+                file,
+                `<BetterDeepSeek>\n[BDS:AUTO] GitHub Fetch Result for: ${repoArg}\n</BetterDeepSeek>`,
+                "GitHub command fetch"
+              )
+            }
+          } catch (err) {
+            if (state.ui) state.ui.showToast(`GitHub fetch failed: ${err.message}`)
           }
+          break
+        }
+
+        // Multiple targets: fetch each individually, then combine into one
+        // concatenated attachment (same "File: X" separator format the app
+        // already uses for whole-repo fetches) and send as a single message.
+        const sections = []
+        const failures = []
+        for (const target of targets) {
+          try {
+            const file = await fetchGitHubRepo(target, () => {}, { token })
+            if (file) {
+              const content = await file.text()
+              sections.push(`\n${"=".repeat(64)}\nSource: ${target}\n${"=".repeat(64)}\n${content}`)
+            }
+          } catch (err) {
+            failures.push(`${target}: ${err.message}`)
+          }
+        }
+
+        if (!sections.length) {
+          if (state.ui) state.ui.showToast(`GitHub fetch failed for all ${targets.length} targets`)
+          break
+        }
+
+        let combined = `Combined fetch of ${targets.length} GitHub targets\n`
+        if (failures.length) {
+          combined += `\n${failures.length} target(s) failed:\n` + failures.map((f) => `  - ${f}`).join("\n") + "\n"
+        }
+        combined += sections.join("\n")
+
+        const blob = new Blob([combined], { type: "text/plain" })
+        const combinedFile = new File([blob], "github_multi_fetch.txt", { type: "text/plain" })
+
+        try {
+          await sendFileWithMessage(
+            combinedFile,
+            `<BetterDeepSeek>\n[BDS:AUTO] GitHub Fetch Result for ${sections.length}/${targets.length} targets: ${targets.join(", ")}\n</BetterDeepSeek>`,
+            "GitHub multi-fetch command"
+          )
         } catch (err) {
           if (state.ui) state.ui.showToast(`GitHub fetch failed: ${err.message}`)
         }
