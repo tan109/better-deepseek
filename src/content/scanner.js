@@ -861,10 +861,17 @@ function setupCommandListener(editor) {
   const handler = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       if (!document.contains(editor)) { devLog("Cmd", "Enter ignored — editor detached"); return }
-      const dropdown = document.querySelector(".bds-cmd-dropdown")
-      if (dropdown) { devLog("Cmd", "Enter ignored — dropdown open"); return }
       const text = getEditorText(editor)
       devLog("Cmd", "Enter pressed, text=", text.substring(0, 80).replace(/\n/g, "\\n"))
+      // Only defer to the autocomplete dropdown (for arrow-key navigation of
+      // suggestions) when the typed text is NOT already a complete,
+      // well-formed slash command -- Autocomplete.svelte has no keydown
+      // handling of its own, so bailing here unconditionally previously
+      // swallowed Enter presses with nothing else picking them up whenever
+      // a short exact-match command (e.g. "/compress") kept the dropdown
+      // open, silently letting the raw text fall through to DeepSeek.
+      const dropdown = document.querySelector(".bds-cmd-dropdown")
+      if (dropdown && !isSlashCommandText(text)) { devLog("Cmd", "Enter ignored — dropdown open"); return }
       if (isSlashCommandText(text)) {
         {
           e.preventDefault()
